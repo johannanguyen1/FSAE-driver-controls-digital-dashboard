@@ -1,0 +1,115 @@
+// Dashboard 2025 Code
+
+#include <mcp_can.h>  // necessary for CAN Protocol communication commands
+#include <SPI.h>      // necessary for serial communication between the SPI devices and the MicroController
+
+// Define the pins between the MCP2515 Board and the MicroController
+#define CS_Pin 10
+#define INTRPT_Pin 9 // or 0
+
+// Variables for data metrics
+float voltage;
+float coolTemp;
+float engnSpeed;
+float wheelSpeed;
+
+// Flag to indicate CAN initialization
+bool can_initialized = false;
+
+// Create an instance of MCP_CAN with the CS pin
+MCP_CAN CAN(CS_Pin);
+
+void setup() {
+  // Input and Output pin setups
+  pinMode(CS_Pin, OUTPUT);
+  pinMode(INTRPT_Pin, INPUT);
+
+  // Initialize Serial for debugging
+  Serial.begin(9600);
+  while (!Serial);
+  Serial.println("CAN Receiver Callback");
+
+  // Start the CAN bus at 250 kbps (using MCP_CAN's specific start command)
+  if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
+    Serial.println("CAN Started");
+    can_initialized = true;
+  } else {
+    Serial.println("Starting CAN failed!");
+    while (1); // Stop if CAN initialization fails
+  }
+
+  // Set CAN mode to normal operation
+  CAN.setMode(MCP_NORMAL);
+}
+
+void loop() {
+  // Check for new CAN messages
+  if (CAN.checkReceive() == CAN_MSGAVAIL) {
+    receiveCANMessage();
+    Serial.println("Can CAN recieve pls say yes");
+
+  }
+
+  // CAN re-initialization logic (if needed)
+  if (!can_initialized) {
+    Serial.println("Attempting to restart CAN...");
+    if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
+      Serial.println("CAN Restarted");
+      can_initialized = true;
+    } else {
+      Serial.println("CAN Restart failed");
+      delay(100); // Wait before retrying
+    }
+  }
+}
+
+// Function to handle receiving CAN messages
+void receiveCANMessage() {
+  unsigned long canId;
+  unsigned char len = 0;
+  unsigned char buf[8];
+
+  // Read message into buffer and get CAN ID
+  CAN.readMsgBuf(&canId, &len, buf);
+
+  Serial.print("Received CAN message with ID: ");
+  Serial.print(canId, HEX);
+  Serial.print(" (Decimal: ");
+  Serial.print(canId);
+  Serial.println(")");
+
+  // Determine the type of data received based on CAN ID
+  union DataConversion {
+    uint32_t bits;
+    float number;
+  } t;
+  t.bits = 0;
+
+  // Convert the first 4 bytes of `buf` to a float using the union
+  for (int i = 0; i < 4 && i < len; i++) {
+    t.bits = (t.bits << 8) | buf[i];
+    Serial.print(buf[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+
+  // Print the converted float number
+  Serial.print("Converted number: ");
+  Serial.println(t.number);
+
+  // Assign received data to appropriate variables based on CAN ID
+  if (canId == 0x700) {
+    coolTemp = t.number;
+    Serial.println("Coolant Temperature Updated");
+  } else if (canId == 0x701) {
+    voltage = t.number;
+    Serial.println("Voltage Updated");
+  } else if (canId == 0x702) {
+    engnSpeed = t.number / 6;
+    Serial.println("Engine Speed Updated");
+  } else if (canId == 0x703) {
+    wheelSpeed = t.number;
+    Serial.println("Wheel Speed Updated");
+  }
+  Serial.println();
+}
