@@ -40,7 +40,20 @@ void setup() {
 
   // Set CAN mode to normal operation
   CAN.setMode(MCP_NORMAL);
+
 }
+
+// Helper function to convert CAN buffer to float
+float extractFloatFromBuffer(unsigned char* buf) {
+  union {
+    uint32_t bits;
+    float number;
+  } data;
+
+  data.bits = (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3];
+  return data.number;
+}
+
 
 void loop() {
   // Check for new CAN messages
@@ -66,7 +79,6 @@ void receiveCANMessage() {
   unsigned char len = 0;
   unsigned char buf[8];
 
-  // Read message into buffer and get CAN ID
   CAN.readMsgBuf(&canId, &len, buf);
 
   Serial.print("Received CAN message with ID: ");
@@ -75,48 +87,38 @@ void receiveCANMessage() {
   Serial.print(canId);
   Serial.print(") (Length: ");
   Serial.print(len);
-  Serial.println(" bytes)");
+  Serial.println(" bytes");
 
-  // Process data based on CAN ID
+  // for debugging
+  Serial.print("Raw data bytes: ");
+  for (int i = 0; i < len; i++) {
+    Serial.print(buf[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+
   if (canId == 0x702) {  // Assuming 0x702 is the CAN ID for RPM data
-    if (len == 8) {  // Expecting 8 bytes for RPM
-      unsigned long long rpm;
-      memcpy(&rpm, buf, sizeof(rpm)); // Copy data from buffer
-
-      // If the RPM is sent as a raw integer, we may need to divide or scale it
-      // Check for endianness, depending on how it's sent
-      // Example: Convert from bytes to a value (this is often necessary)
-      rpm = (buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24)); // Adjust as necessary for endianness
-      // If your RPM is scaled (e.g., if the sender sends RPM in thousands)
-      // Adjust accordingly, e.g., if it is sent in thousands, do:
-      // rpm /= 1000;
-
+      engnSpeed = extractFloatFromBuffer(buf);  // Convert to 16-bit integer for RPM
       Serial.print("Engine Speed (RPM): ");
-      Serial.println(rpm); // Print the RPM value
-    } else {
-      Serial.println("Unexpected length for RPM data");
-    }
+      Serial.println(engnSpeed / 6 + 2);  // Print the RPM value
   }
-
-  // Uncomment and handle the other CAN IDs if needed
-  /*
-  else if (canId == 0x700) {  // Coolant Temperature CAN ID
-    memcpy(&coolTemp, buf, sizeof(float));
-    Serial.print("Coolant Temperature: ");
-    Serial.println(coolTemp);
-  }
-  else if (canId == 0x701) {  // Voltage CAN ID
-    memcpy(&voltage, buf, sizeof(float));
-    Serial.print("Voltage: ");
-    Serial.println(voltage);
-  }
-  else if (canId == 0x648) {  // Wheel Speed CAN ID
-    memcpy(&wheelSpeed, buf, sizeof(float));
-    Serial.print("Wheel Speed: ");
-    Serial.println(wheelSpeed);
-  }
-  */
+  // else if (canId == 0x700) {  // Coolant Temperature CAN ID
+  //   memcpy(&coolTemp, buf, sizeof(float));
+  //   Serial.print("Coolant Temperature: ");
+  //   Serial.println(coolTemp);
+  // }
+  // else if (canId == 0x701) {  // Voltage CAN ID
+  //   memcpy(&voltage, buf, sizeof(float));
+  //   Serial.print("Voltage: ");
+  //   Serial.println(voltage);
+  // }
+  // else if (canId == 0x648) {  // Wheel Speed CAN ID
+  //   memcpy(&wheelSpeed, buf, sizeof(float));
+  //   Serial.print("Wheel Speed: ");
+  //   Serial.println(wheelSpeed);
+  // } else {
+  //     Serial.println("Unexpected CAN ID or message length");
+  // }
 
   Serial.println();
 }
-
