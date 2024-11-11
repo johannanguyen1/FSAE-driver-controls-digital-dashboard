@@ -11,6 +11,7 @@
 float voltage;
 float coolTemp;
 unsigned int engnSpeed;  // RPM will be stored here as an integer
+unsigned int gear = 0;  // currently not set up
 float wheelSpeed;
 
 // Flag to indicate CAN initialization
@@ -72,6 +73,10 @@ void loop() {
       delay(1000);  // Wait before retrying
     }
   }
+
+  Serial1.print("rpm.val=" + String(engnSpeed)); Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);
+  Serial1.print("gear.val=" + String(gear)); Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);
+
 }
 
 void receiveCANMessage() {
