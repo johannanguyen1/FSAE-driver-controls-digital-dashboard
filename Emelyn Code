@@ -74,6 +74,11 @@ void loop() {
     }
   }
 
+
+  // If it doesn't work:
+  // NOTE: Make sure these are the ONLYYYYYY print statements
+  // Serial1 --> Serial
+  // write --> print
   Serial1.print("rpm.val=" + String(engnSpeed)); Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);
   Serial1.print("gear.val=" + String(gear)); Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);
 
