@@ -75,8 +75,9 @@ void loop() {
   }
 
 
-  // If it doesn't work:
   // NOTE: Make sure these are the ONLYYYYYY print statements
+  // NOTE: Make sure you are printing for ALLLLL objects on the Nextion Display, even if its only 0
+  // If it doesn't work:
   // Serial1 --> Serial
   // write --> print
   Serial1.print("rpm.val=" + String(engnSpeed)); Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);
