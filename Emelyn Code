@@ -69,7 +69,10 @@ void loop() {
   // Serial1 --> Serial
   // write --> print
   // Serial1.print("rpm.val=" + String(engnSpeed)); Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);
+  // Serial.print("rpmText.txt=RPM"); Serial.write(0xff); Serial.write(0xff); Serial.write(0xff);
+  // Only print gear if the object has been created in the Nextion Editor Software
   // Serial1.print("gear.val=" + String(gear)); Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);
+
 }
 
 void receiveCANMessage() {
