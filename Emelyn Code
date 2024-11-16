@@ -26,8 +26,8 @@ void setup() {
   pinMode(INTRPT_Pin, INPUT);
 
   // Initialize Serial for debugging
-  Serial.begin(9600);
-  while (!Serial);
+  Serial1.begin(9600);
+  // while (!Serial);
   // Serial.println("CAN Receiver Callback");
 
   // Start the CAN bus at 250 kbps (using MCP_CAN's specific start command)
@@ -41,6 +41,7 @@ void setup() {
 
   // Set CAN mode to normal operation
   CAN.setMode(MCP_NORMAL);
+  delay(1000);
 
 }
 
@@ -68,8 +69,11 @@ void loop() {
   // If it doesn't work:
   // Serial1 --> Serial
   // write --> print
-  Serial1.print("rpm.val=" + String(engnSpeed)); Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);
-  Serial.print("rpmText.txt=RPM"); Serial.write(0xff); Serial.write(0xff); Serial.write(0xff);
+  // Correct way to send data to Nextion display:
+
+// Send RPM value (make sure engnSpeed is already updated)
+
+  
   // Only print gear if the object has been created in the Nextion Editor Software
   // Serial1.print("gear.val=" + String(gear)); Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);
 
@@ -92,16 +96,28 @@ void receiveCANMessage() {
 
   // for debugging
   // Serial.print("Raw data bytes: ");
-  for (int i = 0; i < len; i++) {
+  // for (int i = 0; i < len; i++) {
     // Serial.print(buf[i], HEX);
     // Serial.print(" ");
-  }
+  // }
   // Serial.println();
 
   if (canId == 0x702) {  // Assuming 0x702 is the CAN ID for RPM data
       engnSpeed = extractFloatFromBuffer(buf);  // Convert to 16-bit integer for RPM
+      engnSpeed = engnSpeed / 6 + 2;
       // Serial.print("Engine Speed (RPM): ");
-      // Serial.println(engnSpeed / 6 + 2);  // Print the RPM value
+      // Serial.println(engnSpeed);  // Print the RPM value
+      Serial1.print("rpm.val=");  // Command for setting the RPM value in Nextion object
+      Serial1.print(engnSpeed);    // Send the RPM value as a number
+      Serial1.write(0xFF);         // End of command sequence
+      Serial1.write(0xFF);
+      Serial1.write(0xFF);
+
+      // Send text to rpmText (this is assuming 'rpmText' is a text box on Nextion)
+      Serial1.print("rpmText.txt=\"poo\""); // Set the text to "poo"
+      Serial1.write(0xFF);         // End of command sequence
+      Serial1.write(0xFF);
+      Serial1.write(0xFF);
 
       // Extract gear ratio (assuming it starts at byte 4)
       // This is for reading from MoTec! Testing on 11/14 is using direct gear sensor 
@@ -149,6 +165,5 @@ void convertGearSensor() {
   if (gearSensor > 0 && gearSensor < 150) {
     gear = 1;
   } else if (gearSensor > 0 && gearSensor < 150)
-  }
-
+    gear = 1;
 }
