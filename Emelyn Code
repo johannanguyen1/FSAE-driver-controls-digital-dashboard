@@ -103,18 +103,6 @@ void receiveCANMessage() {
       Serial1.write(0xFF);
       Serial1.write(0xFF);
 
-      Serial1.print("gear.val=");  // Command for setting the Gear value in Nextion object
-      Serial1.print(gear);         // Send the Gear value as a number
-      Serial1.write(0xFF);         // End of command sequence
-      Serial1.write(0xFF);
-      Serial1.write(0xFF);
-
-      // Send text to gearText (this is assuming 'gearText' is a text box on Nextion)
-      Serial1.print("gearText.txt=\"pee\""); // Set the text to "pee"
-      Serial1.write(0xFF);         // End of command sequence
-      Serial1.write(0xFF);
-      Serial1.write(0xFF);
-
       
       // Extract gear ratio (assuming it starts at byte 4)
       // This is for reading from MoTec! Testing on 11/14 is using direct gear sensor 
@@ -141,6 +129,8 @@ void receiveCANMessage() {
   // }
 
   // Serial.println();
+
+  handleGearSensor();
 }
 
 // Helper function to convert CAN buffer to float
@@ -155,7 +145,7 @@ float extractFloatFromBuffer(unsigned char* buf) {
 }
 
 // Helper function to convert and print gear sensor reading into gear output
-void convertGearSensor() {
+void handleGearSensor() {
   // Serial.println(analogRead(A9));
 
   int gearSensor = analogRead(A9);
@@ -174,4 +164,17 @@ void convertGearSensor() {
   } else {
     gear = 0; // Default to 0 for invalid readings
   }
+  
+  Serial1.print("gear.val=");  // Command for setting the Gear value in Nextion object
+  Serial1.print(gear);         // Send the Gear value as a number
+  Serial1.write(0xFF);         // End of command sequence
+  Serial1.write(0xFF);
+  Serial1.write(0xFF);
+
+  // Send text to gearText (this is assuming 'gearText' is a text box on Nextion)
+  Serial1.print("gearText.txt=\"pee\""); // Set the text to "pee"
+  Serial1.write(0xFF);         // End of command sequence
+  Serial1.write(0xFF);
+  Serial1.write(0xFF);
+
 }
