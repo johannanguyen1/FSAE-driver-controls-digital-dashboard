@@ -51,6 +51,8 @@ void loop() {
   if (CAN.checkReceive() == CAN_MSGAVAIL) {
     receiveCANMessage();
   }
+  handleGearSensor();
+
 
   // CAN re-initialization logic (if needed)
   if (!can_initialized) {
@@ -130,7 +132,6 @@ void receiveCANMessage() {
 
   // Serial.println();
 
-  handleGearSensor();
 }
 
 // Helper function to convert CAN buffer to float
@@ -144,27 +145,35 @@ float extractFloatFromBuffer(unsigned char* buf) {
   return data.number;
 }
 
-// Helper function to convert and print gear sensor reading into gear output
-void handleGearSensor() {
-  // Serial.println(analogRead(A9));
-
-  int gearSensor = analogRead(A9);
-  if (gearSensor >= 0 && gearSensor < 170) {
-    gear = 1;
-  } else if (gearSensor >= 170 && gearSensor < 340) {
-    gear = 2;
-  } else if (gearSensor >= 340 && gearSensor < 510) {
-    gear = 3;
-  } else if (gearSensor >= 510 && gearSensor < 680) {
-    gear = 4;
-  } else if (gearSensor >= 680 && gearSensor < 850) {
-    gear = 5;
-  } else if (gearSensor >= 850 && gearSensor <= 1023) {
-    gear = 6;
-  } else {
-    gear = 0; // Default to 0 for invalid readings
+int readGearSensor() {
+  int total = 0;
+  for (int i = 0; i < 10; i++) {
+    total += analogRead(A9);
+    delay(10);  // Small delay to prevent rapid readings
   }
-  
+  return total / 10;  // Return the average reading
+}
+
+void handleGearSensor() {
+  // int gearSensor = readGearSensor();
+  gear = readGearSensor();
+
+  // if (gearSensor >= 0 && gearSensor < 170) {
+  //   gear = 1;
+  // } else if (gearSensor >= 170 && gearSensor < 340) {
+  //   gear = 2;
+  // } else if (gearSensor >= 340 && gearSensor < 510) {
+  //   gear = 3;
+  // } else if (gearSensor >= 510 && gearSensor < 680) {
+  //   gear = 4;
+  // } else if (gearSensor >= 680 && gearSensor < 850) {
+  //   gear = 5;
+  // } else if (gearSensor >= 850 && gearSensor <= 1023) {
+  //   gear = 6;
+  // } else {
+  //   gear = 0; // Default to 0 for invalid readings
+  // }
+
   Serial1.print("gear.val=");  // Command for setting the Gear value in Nextion object
   Serial1.print(gear);         // Send the Gear value as a number
   Serial1.write(0xFF);         // End of command sequence
@@ -176,5 +185,4 @@ void handleGearSensor() {
   Serial1.write(0xFF);         // End of command sequence
   Serial1.write(0xFF);
   Serial1.write(0xFF);
-
 }
