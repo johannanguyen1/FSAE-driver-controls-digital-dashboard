@@ -108,7 +108,8 @@ void receiveCANMessage() {
       
       // Extract gear ratio (assuming it starts at byte 4)
       // This is for reading from MoTec! Testing on 11/14 is using direct gear sensor 
-      // gearRatio = extractFloatFromBuffer(&buf[4]);  // Extract the gear ratio starting from byte 4
+      gear = extractFloatFromBuffer(&buf[4]);  // Extract the gear ratio starting from byte 4
+      handleGearSensor();
       // Serial.print("Gear Ratio: ");
       // Serial.println(gearRatio);  // Print the gear ratio value
   }
@@ -156,7 +157,7 @@ int readGearSensor() {
 
 void handleGearSensor() {
   // int gearSensor = readGearSensor();
-  gear = readGearSensor();
+  // gear = readGearSensor();
 
   // if (gearSensor >= 0 && gearSensor < 170) {
   //   gear = 1;
