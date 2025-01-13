@@ -8,11 +8,13 @@
 #define INTRPT_Pin 9  // or 0
 
 // Variables for data metrics
-float voltage;
-float coolTemp;
+unsigned int voltage;
+unsigned int coolTemp;
 unsigned int engnSpeed;  // RPM will be stored here as an integer
 unsigned int gear;
-float wheelSpeed;
+unsigned int wheelSpeed;
+bool overheating;
+
 
 // Flag to indicate CAN initialization
 bool can_initialized = false;
@@ -51,8 +53,6 @@ void loop() {
   if (CAN.checkReceive() == CAN_MSGAVAIL) {
     receiveCANMessage();
   }
-  handleGearSensor();
-
 
   // CAN re-initialization logic (if needed)
   if (!can_initialized) {
@@ -65,20 +65,6 @@ void loop() {
       delay(1000);  // Wait before retrying
     }
   }
-
-  // NOTE: Make sure these are the ONLYYYYYY print statements
-  // NOTE: Make sure you are printing for ALLLLL objects on the Nextion Display, even if its only 0
-  // If it doesn't work:
-  // Serial1 --> Serial
-  // write --> print
-  // Correct way to send data to Nextion display:
-
-// Send RPM value (make sure engnSpeed is already updated)
-
-  
-  // Only print gear if the object has been created in the Nextion Editor Software
-  // Serial1.print("gear.val=" + String(gear)); Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);
-
 }
 
 void receiveCANMessage() {
@@ -91,28 +77,46 @@ void receiveCANMessage() {
   if (canId == 0x702) {  // Assuming 0x702 is the CAN ID for RPM data
       engnSpeed = extractFloatFromBuffer(buf);  // Convert to 16-bit integer for RPM
       engnSpeed = engnSpeed / 6;
-      // Serial.print("Engine Speed (RPM): ");
-      // Serial.println(engnSpeed);  // Print the RPM value
-      Serial1.print("rpm.val=");  // Command for setting the RPM value in Nextion object
-      Serial1.print(engnSpeed);    // Send the RPM value as a number
-      Serial1.write(0xFF);         // End of command sequence
-      Serial1.write(0xFF);
-      Serial1.write(0xFF);
+      Serial.print("Engine Speed (RPM): ");
+      Serial.println(engnSpeed);  // Print the RPM value
+      // Serial1.print("rpm.val=");  // Command for setting the RPM value in Nextion object
+      // Serial1.print(engnSpeed);    // Send the RPM value as a number
+      // Serial1.write(0xFF);         // End of command sequence
+      // Serial1.write(0xFF);
+      // Serial1.write(0xFF);
 
       // Send text to rpmText (this is assuming 'rpmText' is a text box on Nextion)
-      Serial1.print("rpmText.txt=\"poo\""); // Set the text to "poo"
-      Serial1.write(0xFF);         // End of command sequence
-      Serial1.write(0xFF);
-      Serial1.write(0xFF);
+      // Serial1.print("rpmText.txt=\"poo\""); // Set the text to "poo"
+      // Serial1.write(0xFF);         // End of command sequence
+      // Serial1.write(0xFF);
+      // Serial1.write(0xFF);
 
       
       // Extract gear ratio (assuming it starts at byte 4)
       // This is for reading from MoTec! Testing on 11/14 is using direct gear sensor 
-      gear = extractFloatFromBuffer(&buf[4]);  // Extract the gear ratio starting from byte 4
-      handleGearSensor();
-      // Serial.print("Gear Ratio: ");
-      // Serial.println(gearRatio);  // Print the gear ratio value
+      gear = extractIntFromBuffer(buf + 4);  // Extract the gear ratio starting from byte 4
+      Serial.print("Gear: ");
+      Serial.print(gear);
   }
+  else if (canId == 0x700) {  // Coolant Temperature CAN ID
+    coolTemp = extractFloatFromBuffer(buf);
+    if (coolTemp > 100.0) {  // Check for overheating condition
+      overheating = true;
+      Serial.println("Critical Warning: Coolant Overheating!");
+    } else {
+      overheating = false;
+    }
+    Serial.print("Coolant Temperature: ");
+    Serial.println(coolTemp);
+  } else {
+      Serial.println("Unexpected CAN ID or message length");
+  }
+
+  Serial.println();
+}
+
+
+
   // else if (canId == 0x700) {  // Coolant Temperature CAN ID
   //   memcpy(&coolTemp, buf, sizeof(float));
   //   Serial.print("Coolant Temperature: ");
@@ -146,44 +150,30 @@ float extractFloatFromBuffer(unsigned char* buf) {
   return data.number;
 }
 
-int readGearSensor() {
-  int total = 0;
-  for (int i = 0; i < 10; i++) {
-    total += analogRead(A9);
-    delay(10);  // Small delay to prevent rapid readings
-  }
-  return total / 10;  // Return the average reading
+
+// Helper function to convert CAN buffer to unsigned integer
+unsigned int extractUnsignedIntFromBuffer(unsigned char* buf) {
+    unsigned int value;
+    memcpy(&value, buf, sizeof(value));
+    return value;
 }
 
-void handleGearSensor() {
-  // int gearSensor = readGearSensor();
-  // gear = readGearSensor();
-
-  // if (gearSensor >= 0 && gearSensor < 170) {
-  //   gear = 1;
-  // } else if (gearSensor >= 170 && gearSensor < 340) {
-  //   gear = 2;
-  // } else if (gearSensor >= 340 && gearSensor < 510) {
-  //   gear = 3;
-  // } else if (gearSensor >= 510 && gearSensor < 680) {
-  //   gear = 4;
-  // } else if (gearSensor >= 680 && gearSensor < 850) {
-  //   gear = 5;
-  // } else if (gearSensor >= 850 && gearSensor <= 1023) {
-  //   gear = 6;
-  // } else {
-  //   gear = 0; // Default to 0 for invalid readings
-  // }
-
-  Serial1.print("gear.val=");  // Command for setting the Gear value in Nextion object
-  Serial1.print(gear);         // Send the Gear value as a number
-  Serial1.write(0xFF);         // End of command sequence
-  Serial1.write(0xFF);
-  Serial1.write(0xFF);
-
-  // Send text to gearText (this is assuming 'gearText' is a text box on Nextion)
-  Serial1.print("gearText.txt=\"pee\""); // Set the text to "pee"
-  Serial1.write(0xFF);         // End of command sequence
-  Serial1.write(0xFF);
-  Serial1.write(0xFF);
+// Helper function to convert CAN buffer to signed integer
+int extractIntFromBuffer(unsigned char* buf) {
+    int value;
+    memcpy(&value, buf, sizeof(value));
+    return value;
 }
+
+
+  // Serial1.print("gear.val=");  // Command for setting the Gear value in Nextion object
+  // Serial1.print(gear);         // Send the Gear value as a number
+  // Serial1.write(0xFF);         // End of command sequence
+  // Serial1.write(0xFF);
+  // Serial1.write(0xFF);
+
+  // // Send text to gearText (this is assuming 'gearText' is a text box on Nextion)
+  // Serial1.print("gearText.txt=\"pee\""); // Set the text to "pee"
+  // Serial1.write(0xFF);         // End of command sequence
+  // Serial1.write(0xFF);
+  // Serial1.write(0xFF);
