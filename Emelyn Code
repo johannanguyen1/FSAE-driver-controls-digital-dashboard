@@ -75,10 +75,10 @@ void receiveCANMessage() {
   CAN.readMsgBuf(&canId, &len, buf);
 
   if (canId == 0x702) {  // Assuming 0x702 is the CAN ID for RPM data
-      engnSpeed = extractFloatFromBuffer(buf);  // Convert to 16-bit integer for RPM
-      engnSpeed = engnSpeed / 6;
-      Serial.print("Engine Speed (RPM): ");
-      Serial.println(engnSpeed);  // Print the RPM value
+      // engnSpeed = extractFloatFromBuffer(buf);  // Convert to 16-bit integer for RPM
+      // engnSpeed = engnSpeed / 6;
+      // Serial.print("Engine Speed (RPM): ");
+      // Serial.println(engnSpeed);  // Print the RPM value
       // Serial1.print("rpm.val=");  // Command for setting the RPM value in Nextion object
       // Serial1.print(engnSpeed);    // Send the RPM value as a number
       // Serial1.write(0xFF);         // End of command sequence
@@ -91,10 +91,7 @@ void receiveCANMessage() {
       // Serial1.write(0xFF);
       // Serial1.write(0xFF);
 
-      
-      // Extract gear ratio (assuming it starts at byte 4)
-      // This is for reading from MoTec! Testing on 11/14 is using direct gear sensor 
-      gear = extractIntFromBuffer(buf + 4);  // Extract the gear ratio starting from byte 4
+      gear = buf[7]; 
       Serial.print("Gear: ");
       Serial.print(gear);
   }
@@ -108,9 +105,10 @@ void receiveCANMessage() {
     }
     Serial.print("Coolant Temperature: ");
     Serial.println(coolTemp);
-  } else {
-      Serial.println("Unexpected CAN ID or message length");
   }
+  // } else {
+  //     Serial.println("Unexpected CAN ID or message length");
+  // }
 
   Serial.println();
 }
@@ -137,7 +135,6 @@ void receiveCANMessage() {
 
   // Serial.println();
 
-}
 
 // Helper function to convert CAN buffer to float
 float extractFloatFromBuffer(unsigned char* buf) {
