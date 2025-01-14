@@ -18,7 +18,7 @@ unsigned int batteryVoltage;
 unsigned int fuelUsed;
 
 unsigned int frontRightTemp;
-unsigned int frontLeftTemp;
+unsigned int frontLefttTemp;
 unsigned int rearRightTemp;
 unsigned int rearLeftTemp;
 
@@ -43,10 +43,10 @@ void setup() {
 
   // Start the CAN bus at 250 kbps (using MCP_CAN's specific start command)
   if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
-    Serial.println("CAN Started");
+    // Serial.println("CAN Started");
     can_initialized = true;
   } else {
-    Serial.println("Starting CAN failed!");
+    // Serial.println("Starting CAN failed!");
     while (1);  // Stop if CAN initialization fails
   }
 
@@ -83,7 +83,7 @@ void receiveCANMessage() {
 
   CAN.readMsgBuf(&canId, &len, buf);
 
-  if (canId == 0x102) {  // Assuming 0x902 is the CAN ID for RPM data
+  if (canId == 0x902) {  // Assuming 0x702 is the CAN ID for RPM data
       engnSpeed = extractFloatFromBuffer(buf);  // Convert to 16-bit integer for RPM
       engnSpeed = engnSpeed / 6;
       Serial.print("Engine Speed (RPM): ");
@@ -100,44 +100,76 @@ void receiveCANMessage() {
       // Serial1.write(0xFF);
       // Serial1.write(0xFF);
 
+      sendToNextion("rpm", String(engnSpeed), true);  
+      String rpmText = "poo"; 
+      sendToNextion("rpmText", rpmText, false);  
+
       gear = buf[7]; 
-      Serial.print("Gear: ");
-      Serial.println(gear);
-  } else if (canId == 0x103) {  // Coolant Temperature CAN ID
+      sendToNextion("gear", String(gear), true);  // Update gear.val with the numeric value
+      String gearText = "pee";  // Example text value
+      sendToNextion("gearText", gearText, false);  // Update gearText.txt with the text value
+
+      // Serial.print("Gear: ");
+      // Serial.print(gear);
+  } else if (canId == 0x903) {  // Coolant Temperature CAN ID
     coolInTemp = extractFloatFromBuffer(buf);
     coolOutTemp = extractFloatFromBuffer(buf + 4);
-    if (coolInTemp - coolOutTemp < 5) {  // Check for overheating condition, 5C/9F
+    if (coolInTemp > 102) {  // Check for overheating condition, 102C/200F ASK
       overheating = true;
-      Serial.println("Critical Warning: Coolant Overheating!");
+      // Serial.println("Critical Warning: Coolant Overheating!");
+                // ADD TO NEXTION 
+      String overheatingText = "Critical Warning: Coolant Overheating";  
+      sendToNextion("overheatingText", overheatingText, false);  
     } else {
       overheating = false;
     }
-    Serial.print("Coolant Inlet Temperature: ");
-    Serial.println(coolInTemp);
-    Serial.print("Coolant Outlet Temperature: ");
-    Serial.println(coolOutTemp);
-  } else if (canId == 0x104) {  
+                // ADD TO NEXTION 
+    sendToNextion("coolInTemp", String(coolInTemp), true); 
+    String coolInTempText = "Coolant Inlet Temp";  
+    sendToNextion("coolInTempText", coolInTempText, false);  
+                // ADD TO NEXTION 
+    sendToNextion("coolOutTemp", String(coolOutTemp), true); 
+    String coolOutTempText = "Coolant Outlet Temp";  
+    sendToNextion("coolOutTempText", coolOutTempText, false);  
+
+    // Serial.print("Coolant Inlet Temperature: ");
+    // Serial.println(coolInTemp);
+    // Serial.print("Coolant Outlet Temperature: ");
+    // Serial.println(coolOutTemp);
+  } else if (canId == 0x904) {  
     batteryVoltage = extractFloatFromBuffer(buf);  // Extract battery voltage
     fuelUsed = extractFloatFromBuffer(buf + 4);  // Extract fuel used
-    Serial.print("Battery Voltage: ");
-    Serial.println(batteryVoltage);
-    Serial.print("Fuel Used: ");
-    Serial.println(fuelUsed);
-  } else if (canId == 0x105) {  
-    frontRightTemp = extractFloatFromBuffer(buf);  // Extract front-right tire temp
-    frontLeftTemp = extractFloatFromBuffer(buf + 4);  // Extract front-left tire temp
-    Serial.print("Front Right Tire Temp: ");
-    Serial.println(frontRightTemp);
-    Serial.print("Front Left Tire Temp: ");
-    Serial.println(frontLeftTemp);
-  } else if (canId == 0x106) {  
-    rearRightTemp = extractFloatFromBuffer(buf);  // Extract rear-right tire temp
-    rearLeftTemp = extractFloatFromBuffer(buf + 4);  // Extract rear-left tire temp
-    Serial.print("Rear Right Tire Temp: ");
-    Serial.println(rearRightTemp);
-    Serial.print("Rear Left Tire Temp: ");
-    Serial.println(rearLeftTemp);
+    // Serial.print("Battery Voltage: ");
+    // Serial.println(batteryVoltage);
+    // Serial.print("Fuel Used: ");
+    // Serial.println(fuelUsed);
+
+                    // ADD TO NEXTION 
+    sendToNextion("batteryVoltage", String(batteryVoltage), true); 
+    String batteryVoltageText = "Battery Voltage";  
+    sendToNextion("batteryVoltageText", batteryVoltageText, false);  
+                // ADD TO NEXTION 
+    sendToNextion("fuelUsed", String(fuelUsed), true); 
+    String fuelUsedText = "Fuel Used";  
+    sendToNextion("fuelUsedText", fuelUsedText, false);  
+
   }
+  // } else if (canId == 0x905) {  
+  //   frontRightTemp = extractFloatFromBuffer(buf);  // Extract front-right tire temp
+  //   frontLeftTemp = extractFloatFromBuffer(buf + 4);  // Extract front-left tire temp
+  //   Serial.print("Front Right Tire Temp: ");
+  //   Serial.println(frontRightTemp);
+  //   Serial.print("Front Left Tire Temp: ");
+  //   Serial.println(frontLeftTemp);
+  // } else if (canId == 0x906) {  
+  //   rearRightTemp = extractFloatFromBuffer(buf);  // Extract rear-right tire temp
+  //   rearLeftTemp = extractFloatFromBuffer(buf + 4);  // Extract rear-left tire temp
+  //   Serial.print("Rear Right Tire Temp: ");
+  //   Serial.println(rearRightTemp);
+  //   Serial.print("Rear Left Tire Temp: ");
+  //   Serial.println(rearLeftTemp);
+  // }
+  // Serial.println();
 }
 
 // Helper function to convert CAN buffer to float
@@ -151,19 +183,19 @@ float extractFloatFromBuffer(unsigned char* buf) {
   return data.number;
 }
 
-
-// Helper function to convert CAN buffer to unsigned integer
-unsigned int extractUnsignedIntFromBuffer(unsigned char* buf) {
-    unsigned int value;
-    memcpy(&value, buf, sizeof(value));
-    return value;
-}
-
-// Helper function to convert CAN buffer to signed integer
-int extractIntFromBuffer(unsigned char* buf) {
-    int value;
-    memcpy(&value, buf, sizeof(value));
-    return value;
+void sendToNextion(const String& objectName, const String& value, bool isNumeric) {
+    if (isNumeric) {
+        Serial1.print(objectName + ".val=");  // Command for setting numeric value
+        Serial1.print(value);                // Send the value as a number
+    } else {
+        Serial1.print(objectName + ".txt=\"");  // Command for setting text value
+        Serial1.print(value);                   // Send the value as a string
+        Serial1.print("\"");
+    }
+    // End of command sequence (required by Nextion protocol)
+    Serial1.write(0xFF);
+    Serial1.write(0xFF);
+    Serial1.write(0xFF);
 }
 
 
