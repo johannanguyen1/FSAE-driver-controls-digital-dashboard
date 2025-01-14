@@ -18,7 +18,7 @@ unsigned int batteryVoltage;
 unsigned int fuelUsed;
 
 unsigned int frontRightTemp;
-unsigned int frontLefttTemp;
+unsigned int frontLeftTemp;
 unsigned int rearRightTemp;
 unsigned int rearLeftTemp;
 
@@ -43,10 +43,10 @@ void setup() {
 
   // Start the CAN bus at 250 kbps (using MCP_CAN's specific start command)
   if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
-    // Serial.println("CAN Started");
+    Serial.println("CAN Started");
     can_initialized = true;
   } else {
-    // Serial.println("Starting CAN failed!");
+    Serial.println("Starting CAN failed!");
     while (1);  // Stop if CAN initialization fails
   }
 
@@ -83,7 +83,7 @@ void receiveCANMessage() {
 
   CAN.readMsgBuf(&canId, &len, buf);
 
-  if (canId == 0x902) {  // Assuming 0x702 is the CAN ID for RPM data
+  if (canId == 0x102) {  // Assuming 0x902 is the CAN ID for RPM data
       engnSpeed = extractFloatFromBuffer(buf);  // Convert to 16-bit integer for RPM
       engnSpeed = engnSpeed / 6;
       Serial.print("Engine Speed (RPM): ");
@@ -102,8 +102,8 @@ void receiveCANMessage() {
 
       gear = buf[7]; 
       Serial.print("Gear: ");
-      Serial.print(gear);
-  } else if (canId == 0x903) {  // Coolant Temperature CAN ID
+      Serial.println(gear);
+  } else if (canId == 0x103) {  // Coolant Temperature CAN ID
     coolInTemp = extractFloatFromBuffer(buf);
     coolOutTemp = extractFloatFromBuffer(buf + 4);
     if (coolInTemp - coolOutTemp < 5) {  // Check for overheating condition, 5C/9F
@@ -116,21 +116,21 @@ void receiveCANMessage() {
     Serial.println(coolInTemp);
     Serial.print("Coolant Outlet Temperature: ");
     Serial.println(coolOutTemp);
-  } else if (canId == 0x904) {  
+  } else if (canId == 0x104) {  
     batteryVoltage = extractFloatFromBuffer(buf);  // Extract battery voltage
     fuelUsed = extractFloatFromBuffer(buf + 4);  // Extract fuel used
     Serial.print("Battery Voltage: ");
     Serial.println(batteryVoltage);
     Serial.print("Fuel Used: ");
     Serial.println(fuelUsed);
-  } else if (canId == 0x905) {  
+  } else if (canId == 0x105) {  
     frontRightTemp = extractFloatFromBuffer(buf);  // Extract front-right tire temp
     frontLeftTemp = extractFloatFromBuffer(buf + 4);  // Extract front-left tire temp
     Serial.print("Front Right Tire Temp: ");
     Serial.println(frontRightTemp);
     Serial.print("Front Left Tire Temp: ");
     Serial.println(frontLeftTemp);
-  } else if (canId == 0x906) {  
+  } else if (canId == 0x106) {  
     rearRightTemp = extractFloatFromBuffer(buf);  // Extract rear-right tire temp
     rearLeftTemp = extractFloatFromBuffer(buf + 4);  // Extract rear-left tire temp
     Serial.print("Rear Right Tire Temp: ");
@@ -138,7 +138,6 @@ void receiveCANMessage() {
     Serial.print("Rear Left Tire Temp: ");
     Serial.println(rearLeftTemp);
   }
-  Serial.println();
 }
 
 // Helper function to convert CAN buffer to float
