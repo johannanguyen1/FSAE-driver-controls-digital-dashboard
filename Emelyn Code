@@ -8,12 +8,21 @@
 #define INTRPT_Pin 9  // or 0
 
 // Variables for data metrics
-unsigned int voltage;
-unsigned int coolTemp;
+unsigned int coolInTemp;
+unsigned int coolOutTemp;
 unsigned int engnSpeed;  // RPM will be stored here as an integer
 unsigned int gear;
 unsigned int wheelSpeed;
 bool overheating;
+unsigned int batteryVoltage;
+unsigned int fuelUsed;
+
+unsigned int frontRightTemp;
+unsigned int frontLefttTemp;
+unsigned int rearRightTemp;
+unsigned int rearLeftTemp;
+
+
 
 
 // Flag to indicate CAN initialization
@@ -74,11 +83,11 @@ void receiveCANMessage() {
 
   CAN.readMsgBuf(&canId, &len, buf);
 
-  if (canId == 0x702) {  // Assuming 0x702 is the CAN ID for RPM data
-      // engnSpeed = extractFloatFromBuffer(buf);  // Convert to 16-bit integer for RPM
-      // engnSpeed = engnSpeed / 6;
-      // Serial.print("Engine Speed (RPM): ");
-      // Serial.println(engnSpeed);  // Print the RPM value
+  if (canId == 0x902) {  // Assuming 0x702 is the CAN ID for RPM data
+      engnSpeed = extractFloatFromBuffer(buf);  // Convert to 16-bit integer for RPM
+      engnSpeed = engnSpeed / 6;
+      Serial.print("Engine Speed (RPM): ");
+      Serial.println(engnSpeed);  // Print the RPM value
       // Serial1.print("rpm.val=");  // Command for setting the RPM value in Nextion object
       // Serial1.print(engnSpeed);    // Send the RPM value as a number
       // Serial1.write(0xFF);         // End of command sequence
@@ -94,47 +103,43 @@ void receiveCANMessage() {
       gear = buf[7]; 
       Serial.print("Gear: ");
       Serial.print(gear);
-  }
-  else if (canId == 0x700) {  // Coolant Temperature CAN ID
-    coolTemp = extractFloatFromBuffer(buf);
-    if (coolTemp > 100.0) {  // Check for overheating condition
+  } else if (canId == 0x903) {  // Coolant Temperature CAN ID
+    coolInTemp = extractFloatFromBuffer(buf);
+    coolOutTemp = extractFloatFromBuffer(buf + 4);
+    if (coolInTemp - coolOutTemp < 5) {  // Check for overheating condition, 5C/9F
       overheating = true;
       Serial.println("Critical Warning: Coolant Overheating!");
     } else {
       overheating = false;
     }
-    Serial.print("Coolant Temperature: ");
-    Serial.println(coolTemp);
+    Serial.print("Coolant Inlet Temperature: ");
+    Serial.println(coolInTemp);
+    Serial.print("Coolant Outlet Temperature: ");
+    Serial.println(coolOutTemp);
+  } else if (canId == 0x904) {  
+    batteryVoltage = extractFloatFromBuffer(buf);  // Extract battery voltage
+    fuelUsed = extractFloatFromBuffer(buf + 4);  // Extract fuel used
+    Serial.print("Battery Voltage: ");
+    Serial.println(batteryVoltage);
+    Serial.print("Fuel Used: ");
+    Serial.println(fuelUsed);
+  } else if (canId == 0x905) {  
+    frontRightTemp = extractFloatFromBuffer(buf);  // Extract front-right tire temp
+    frontLeftTemp = extractFloatFromBuffer(buf + 4);  // Extract front-left tire temp
+    Serial.print("Front Right Tire Temp: ");
+    Serial.println(frontRightTemp);
+    Serial.print("Front Left Tire Temp: ");
+    Serial.println(frontLeftTemp);
+  } else if (canId == 0x906) {  
+    rearRightTemp = extractFloatFromBuffer(buf);  // Extract rear-right tire temp
+    rearLeftTemp = extractFloatFromBuffer(buf + 4);  // Extract rear-left tire temp
+    Serial.print("Rear Right Tire Temp: ");
+    Serial.println(rearRightTemp);
+    Serial.print("Rear Left Tire Temp: ");
+    Serial.println(rearLeftTemp);
   }
-  // } else {
-  //     Serial.println("Unexpected CAN ID or message length");
-  // }
-
   Serial.println();
 }
-
-
-
-  // else if (canId == 0x700) {  // Coolant Temperature CAN ID
-  //   memcpy(&coolTemp, buf, sizeof(float));
-  //   Serial.print("Coolant Temperature: ");
-  //   Serial.println(coolTemp);
-  // }
-  // else if (canId == 0x701) {  // Voltage CAN ID
-  //   memcpy(&voltage, buf, sizeof(float));
-  //   Serial.print("Voltage: ");
-  //   Serial.println(voltage);
-  // }
-  // else if (canId == 0x648) {  // Wheel Speed CAN ID
-  //   memcpy(&wheelSpeed, buf, sizeof(float));
-  //   Serial.print("Wheel Speed: ");
-  //   Serial.println(wheelSpeed);
-  // } else {
-  //     Serial.println("Unexpected CAN ID or message length");
-  // }
-
-  // Serial.println();
-
 
 // Helper function to convert CAN buffer to float
 float extractFloatFromBuffer(unsigned char* buf) {
