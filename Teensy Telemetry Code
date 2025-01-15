@@ -123,12 +123,12 @@ void receiveCANMessage() {
     }
                 // ADD TO NEXTION 
     sendToNextion("coolInTemp", String(coolInTemp), true); 
-    String coolInTempText = "Coolant Inlet Temp";  
-    sendToNextion("coolInTempText", coolInTempText, false);  
+    String coolInText = "Coolant Inlet Temp";  
+    sendToNextion("coolInText", coolInText, false);  
                 // ADD TO NEXTION 
     sendToNextion("coolOutTemp", String(coolOutTemp), true); 
-    String coolOutTempText = "Coolant Outlet Temp";  
-    sendToNextion("coolOutTempText", coolOutTempText, false);  
+    String coolOutText = "Coolant Outlet Temp";  
+    sendToNextion("coolOutText", coolOutText, false);  
 
     // Serial.print("Coolant Inlet Temperature: ");
     // Serial.println(coolInTemp);
