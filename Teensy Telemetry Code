@@ -116,8 +116,8 @@ void receiveCANMessage() {
       overheating = true;
       // Serial.println("Critical Warning: Coolant Overheating!");
                 // ADD TO NEXTION 
-      String overheatingText = "Critical Warning: Coolant Overheating";  
-      sendToNextion("overheatingText", overheatingText, false);  
+      String overheatText = "Critical Warning: Coolant Overheating";  
+      sendToNextion("overheatText", overheatText, false);  
     } else {
       overheating = false;
     }
@@ -144,8 +144,8 @@ void receiveCANMessage() {
 
                     // ADD TO NEXTION 
     sendToNextion("batteryVoltage", String(batteryVoltage), true); 
-    String batteryVoltageText = "Battery Voltage";  
-    sendToNextion("batteryVoltageText", batteryVoltageText, false);  
+    String batteryText = "Battery Voltage";  
+    sendToNextion("batteryText", batteryText, false);  
                 // ADD TO NEXTION 
     sendToNextion("fuelUsed", String(fuelUsed), true); 
     String fuelUsedText = "Fuel Used";  
