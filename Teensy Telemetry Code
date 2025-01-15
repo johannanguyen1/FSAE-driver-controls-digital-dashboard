@@ -16,13 +16,10 @@ unsigned int wheelSpeed;
 bool overheating;
 unsigned int batteryVoltage;
 unsigned int fuelUsed;
-
 unsigned int frontRightTemp;
 unsigned int frontLefttTemp;
 unsigned int rearRightTemp;
 unsigned int rearLeftTemp;
-
-
 
 
 // Flag to indicate CAN initialization
@@ -86,8 +83,9 @@ void receiveCANMessage() {
   if (canId == 0x902) {  // Assuming 0x702 is the CAN ID for RPM data
       engnSpeed = extractFloatFromBuffer(buf);  // Convert to 16-bit integer for RPM
       engnSpeed = engnSpeed / 6;
-      Serial.print("Engine Speed (RPM): ");
-      Serial.println(engnSpeed);  // Print the RPM value
+      engnSpeed = 
+      // Serial.print("Engine Speed (RPM): ");
+      // Serial.println(engnSpeed);  // Print the RPM value
       // Serial1.print("rpm.val=");  // Command for setting the RPM value in Nextion object
       // Serial1.print(engnSpeed);    // Send the RPM value as a number
       // Serial1.write(0xFF);         // End of command sequence
@@ -101,12 +99,12 @@ void receiveCANMessage() {
       // Serial1.write(0xFF);
 
       sendToNextion("rpm", String(engnSpeed), true);  
-      String rpmText = "poo"; 
+      String rpmText = "RPM"; 
       sendToNextion("rpmText", rpmText, false);  
 
       gear = buf[7]; 
       sendToNextion("gear", String(gear), true);  // Update gear.val with the numeric value
-      String gearText = "pee";  // Example text value
+      String gearText = "Gear";  // Example text value
       sendToNextion("gearText", gearText, false);  // Update gearText.txt with the text value
 
       // Serial.print("Gear: ");
