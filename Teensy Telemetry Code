@@ -80,21 +80,20 @@ void receiveCANMessage() {
 
   CAN.readMsgBuf(&canId, &len, buf);
 
-  if (canId == 0x902) {  // Assuming 0x702 is the CAN ID for RPM data
+  if (canId == 0x102) { 
       engnSpeed = extractFloatFromBuffer(buf);  // Convert to 16-bit integer for RPM
       engnSpeed = engnSpeed / 6;
-      engnSpeed = 
       // Serial.print("Engine Speed (RPM): ");
-      // Serial.println(engnSpeed);  // Print the RPM value
-      // Serial1.print("rpm.val=");  // Command for setting the RPM value in Nextion object
-      // Serial1.print(engnSpeed);    // Send the RPM value as a number
-      // Serial1.write(0xFF);         // End of command sequence
+      // Serial.println(engnSpeed);  
+      // Serial1.print("rpm.val=");  
+      // Serial1.print(engnSpeed);    
+      // Serial1.write(0xFF);         
       // Serial1.write(0xFF);
       // Serial1.write(0xFF);
 
       // Send text to rpmText (this is assuming 'rpmText' is a text box on Nextion)
       // Serial1.print("rpmText.txt=\"poo\""); // Set the text to "poo"
-      // Serial1.write(0xFF);         // End of command sequence
+      // Serial1.write(0xFF);         
       // Serial1.write(0xFF);
       // Serial1.write(0xFF);
 
@@ -109,7 +108,7 @@ void receiveCANMessage() {
 
       // Serial.print("Gear: ");
       // Serial.print(gear);
-  } else if (canId == 0x903) {  // Coolant Temperature CAN ID
+  } else if (canId == 0x103) {  // Coolant Temperature CAN ID
     coolInTemp = extractFloatFromBuffer(buf);
     coolOutTemp = extractFloatFromBuffer(buf + 4);
     if (coolInTemp > 102) {  // Check for overheating condition, 102C/200F ASK
@@ -134,7 +133,7 @@ void receiveCANMessage() {
     // Serial.println(coolInTemp);
     // Serial.print("Coolant Outlet Temperature: ");
     // Serial.println(coolOutTemp);
-  } else if (canId == 0x904) {  
+  } else if (canId == 0x104) {  
     batteryVoltage = extractFloatFromBuffer(buf);  // Extract battery voltage
     fuelUsed = extractFloatFromBuffer(buf + 4);  // Extract fuel used
     // Serial.print("Battery Voltage: ");
@@ -142,11 +141,10 @@ void receiveCANMessage() {
     // Serial.print("Fuel Used: ");
     // Serial.println(fuelUsed);
 
-                    // ADD TO NEXTION 
     sendToNextion("batteryVoltage", String(batteryVoltage), true); 
     String batteryText = "Battery Voltage";  
     sendToNextion("batteryText", batteryText, false);  
-                // ADD TO NEXTION 
+    // we want fuel left
     sendToNextion("fuelUsed", String(fuelUsed), true); 
     String fuelUsedText = "Fuel Used";  
     sendToNextion("fuelUsedText", fuelUsedText, false);  
