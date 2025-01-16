@@ -1,5 +1,3 @@
-// Dashboard 2025 Code
-
 #include <mcp_can.h>  // necessary for CAN Protocol communication commands
 #include <SPI.h>      // necessary for serial communication between the SPI devices and the MicroController
 
@@ -21,6 +19,12 @@ unsigned int frontLefttTemp;
 unsigned int rearRightTemp;
 unsigned int rearLeftTemp;
 
+// Variables for tracking last sent values
+static String lastRPM, lastGear, lastCoolInTemp, lastCoolOutTemp;
+
+// Timing variables
+unsigned long lastUpdateTime = 0;
+const unsigned long updateInterval = 200; // Update every 200ms
 
 // Flag to indicate CAN initialization
 bool can_initialized = false;
@@ -35,24 +39,18 @@ void setup() {
 
   // Initialize Serial for debugging
   Serial1.begin(9600);
-  // while (!Serial);
-  // Serial.println("CAN Receiver Callback");
 
   // Start the CAN bus at 250 kbps (using MCP_CAN's specific start command)
   if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
-    // Serial.println("CAN Started");
     can_initialized = true;
   } else {
-    // Serial.println("Starting CAN failed!");
     while (1);  // Stop if CAN initialization fails
   }
 
   // Set CAN mode to normal operation
   CAN.setMode(MCP_NORMAL);
   delay(1000);
-
 }
-
 
 void loop() {
   // Check for new CAN messages
@@ -62,13 +60,11 @@ void loop() {
 
   // CAN re-initialization logic (if needed)
   if (!can_initialized) {
-    // Serial.println("Attempting to restart CAN...");
-    if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
-      // Serial.println("CAN Restarted");
-      can_initialized = true;
-    } else {
-      // Serial.println("CAN Restart failed");
-      delay(1000);  // Wait before retrying
+    if (millis() - lastUpdateTime > updateInterval) {
+      if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
+        can_initialized = true;
+      }
+      lastUpdateTime = millis();
     }
   }
 }
@@ -80,92 +76,40 @@ void receiveCANMessage() {
 
   CAN.readMsgBuf(&canId, &len, buf);
 
-  if (canId == 0x102) { 
-      engnSpeed = extractFloatFromBuffer(buf);  // Convert to 16-bit integer for RPM
-      engnSpeed = engnSpeed / 6;
-      // Serial.print("Engine Speed (RPM): ");
-      // Serial.println(engnSpeed);  
-      // Serial1.print("rpm.val=");  
-      // Serial1.print(engnSpeed);    
-      // Serial1.write(0xFF);         
-      // Serial1.write(0xFF);
-      // Serial1.write(0xFF);
+  if (canId == 0x102) {  // Assuming 0x102 is the CAN ID for RPM and Gear data
+    engnSpeed = extractFloatFromBuffer(buf) / 6;  // Convert to RPM
+    gear = buf[7];  // Extract gear value
 
-      // Send text to rpmText (this is assuming 'rpmText' is a text box on Nextion)
-      // Serial1.print("rpmText.txt=\"poo\""); // Set the text to "poo"
-      // Serial1.write(0xFF);         
-      // Serial1.write(0xFF);
-      // Serial1.write(0xFF);
+    // Send data to Nextion
+    sendToNextionIfChanged("rpm", String(engnSpeed), lastRPM, true);
+    sendToNextion("rpmText", "RPM", false);
+    sendToNextionIfChanged("gear", String(gear), lastGear, true);
+    sendToNextion("gearText", "Gear", false);
 
-      sendToNextion("rpm", String(engnSpeed), true);  
-      String rpmText = "RPM"; 
-      sendToNextion("rpmText", rpmText, false);  
-
-      gear = buf[7]; 
-      sendToNextion("gear", String(gear), true);  // Update gear.val with the numeric value
-      String gearText = "Gear";  // Example text value
-      sendToNextion("gearText", gearText, false);  // Update gearText.txt with the text value
-
-      // Serial.print("Gear: ");
-      // Serial.print(gear);
   } else if (canId == 0x103) {  // Coolant Temperature CAN ID
     coolInTemp = extractFloatFromBuffer(buf);
     coolOutTemp = extractFloatFromBuffer(buf + 4);
-    if (coolInTemp > 102) {  // Check for overheating condition, 102C/200F ASK
-      overheating = true;
-      // Serial.println("Critical Warning: Coolant Overheating!");
-                // ADD TO NEXTION 
-      String overheatText = "Critical Warning: Coolant Overheating";  
-      sendToNextion("overheatText", overheatText, false);  
-    } else {
-      overheating = false;
+    overheating = coolInTemp > 102;  // Check for overheating condition
+
+    // Update Nextion with coolant data
+    sendToNextionIfChanged("coolInTemp", String(coolInTemp), lastCoolInTemp, true);
+    sendToNextion("coolInText", "Coolant Inlet Temp", false);
+    sendToNextionIfChanged("coolOutTemp", String(coolOutTemp), lastCoolOutTemp, true);
+    sendToNextion("coolOutText", "Coolant Outlet Temp", false);
+
+    if (overheating) {
+      sendToNextion("overheatText", "Critical Warning: Coolant Overheating", false);
     }
-                // ADD TO NEXTION 
-    sendToNextion("coolInTemp", String(coolInTemp), true); 
-    String coolInText = "Coolant Inlet Temp";  
-    sendToNextion("coolInText", coolInText, false);  
-                // ADD TO NEXTION 
-    sendToNextion("coolOutTemp", String(coolOutTemp), true); 
-    String coolOutText = "Coolant Outlet Temp";  
-    sendToNextion("coolOutText", coolOutText, false);  
 
-    // Serial.print("Coolant Inlet Temperature: ");
-    // Serial.println(coolInTemp);
-    // Serial.print("Coolant Outlet Temperature: ");
-    // Serial.println(coolOutTemp);
-  } else if (canId == 0x104) {  
+  } else if (canId == 0x104) {  // Battery and Fuel data CAN ID
     batteryVoltage = extractFloatFromBuffer(buf);  // Extract battery voltage
-    fuelUsed = extractFloatFromBuffer(buf + 4);  // Extract fuel used
-    // Serial.print("Battery Voltage: ");
-    // Serial.println(batteryVoltage);
-    // Serial.print("Fuel Used: ");
-    // Serial.println(fuelUsed);
+    fuelUsed = extractFloatFromBuffer(buf + 4);    // Extract fuel used
 
-    sendToNextion("batteryVoltage", String(batteryVoltage), true); 
-    String batteryText = "Battery Voltage";  
-    sendToNextion("batteryText", batteryText, false);  
-    // we want fuel left
-    sendToNextion("fuelUsed", String(fuelUsed), true); 
-    String fuelUsedText = "Fuel Used";  
-    sendToNextion("fuelUsedText", fuelUsedText, false);  
-
+    sendToNextion("batteryVoltage", String(batteryVoltage), true);
+    sendToNextion("batteryText", "Battery Voltage", false);
+    sendToNextion("fuelUsed", String(fuelUsed), true);
+    sendToNextion("fuelUsedText", "Fuel Used", false);
   }
-  // } else if (canId == 0x905) {  
-  //   frontRightTemp = extractFloatFromBuffer(buf);  // Extract front-right tire temp
-  //   frontLeftTemp = extractFloatFromBuffer(buf + 4);  // Extract front-left tire temp
-  //   Serial.print("Front Right Tire Temp: ");
-  //   Serial.println(frontRightTemp);
-  //   Serial.print("Front Left Tire Temp: ");
-  //   Serial.println(frontLeftTemp);
-  // } else if (canId == 0x906) {  
-  //   rearRightTemp = extractFloatFromBuffer(buf);  // Extract rear-right tire temp
-  //   rearLeftTemp = extractFloatFromBuffer(buf + 4);  // Extract rear-left tire temp
-  //   Serial.print("Rear Right Tire Temp: ");
-  //   Serial.println(rearRightTemp);
-  //   Serial.print("Rear Left Tire Temp: ");
-  //   Serial.println(rearLeftTemp);
-  // }
-  // Serial.println();
 }
 
 // Helper function to convert CAN buffer to float
@@ -180,29 +124,23 @@ float extractFloatFromBuffer(unsigned char* buf) {
 }
 
 void sendToNextion(const String& objectName, const String& value, bool isNumeric) {
-    if (isNumeric) {
-        Serial1.print(objectName + ".val=");  // Command for setting numeric value
-        Serial1.print(value);                // Send the value as a number
-    } else {
-        Serial1.print(objectName + ".txt=\"");  // Command for setting text value
-        Serial1.print(value);                   // Send the value as a string
-        Serial1.print("\"");
-    }
-    // End of command sequence (required by Nextion protocol)
-    Serial1.write(0xFF);
-    Serial1.write(0xFF);
-    Serial1.write(0xFF);
+  if (isNumeric) {
+    Serial1.print(objectName + ".val=");  // Command for setting numeric value
+    Serial1.print(value);                // Send the value as a number
+  } else {
+    Serial1.print(objectName + ".txt=\"");  // Command for setting text value
+    Serial1.print(value);                   // Send the value as a string
+    Serial1.print("\"");
+  }
+  // End of command sequence (required by Nextion protocol)
+  Serial1.write(0xFF);
+  Serial1.write(0xFF);
+  Serial1.write(0xFF);
 }
 
-
-  // Serial1.print("gear.val=");  // Command for setting the Gear value in Nextion object
-  // Serial1.print(gear);         // Send the Gear value as a number
-  // Serial1.write(0xFF);         // End of command sequence
-  // Serial1.write(0xFF);
-  // Serial1.write(0xFF);
-
-  // // Send text to gearText (this is assuming 'gearText' is a text box on Nextion)
-  // Serial1.print("gearText.txt=\"pee\""); // Set the text to "pee"
-  // Serial1.write(0xFF);         // End of command sequence
-  // Serial1.write(0xFF);
-  // Serial1.write(0xFF);
+void sendToNextionIfChanged(const String& objectName, const String& value, String& lastValue, bool isNumeric) {
+  if (value != lastValue) {  // Only update if the value has changed
+    sendToNextion(objectName, value, isNumeric);
+    lastValue = value;  // Update the cached value
+  }
+}
