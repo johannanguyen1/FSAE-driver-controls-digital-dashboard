@@ -6,21 +6,12 @@
 #define INTRPT_Pin 9  // or 0
 
 // Variables for data metrics
-unsigned int coolInTemp;
-unsigned int coolOutTemp;
 unsigned int engnSpeed;  // RPM will be stored here as an integer
 unsigned int gear;
-unsigned int wheelSpeed;
-bool overheating;
-unsigned int batteryVoltage;
-unsigned int fuelUsed;
-unsigned int frontRightTemp;
-unsigned int frontLefttTemp;
-unsigned int rearRightTemp;
-unsigned int rearLeftTemp;
+
 
 // Variables for tracking last sent values
-static String lastRPM, lastGear, lastCoolInTemp, lastCoolOutTemp;
+static String lastRPM, lastGear
 
 // Timing variables
 unsigned long lastUpdateTime = 0;
@@ -78,38 +69,12 @@ void receiveCANMessage() {
 
   if (canId == 0x102) {  // Assuming 0x102 is the CAN ID for RPM and Gear data
     engnSpeed = extractFloatFromBuffer(buf) / 6;  // Convert to RPM
+
     gear = buf[7];  // Extract gear value
 
     // Send data to Nextion
     sendToNextionIfChanged("rpm", String(engnSpeed), lastRPM, true);
-    sendToNextion("rpmText", "RPM", false);
     sendToNextionIfChanged("gear", String(gear), lastGear, true);
-    sendToNextion("gearText", "Gear", false);
-
-  } else if (canId == 0x103) {  // Coolant Temperature CAN ID
-    coolInTemp = extractFloatFromBuffer(buf);
-    coolOutTemp = extractFloatFromBuffer(buf + 4);
-    overheating = coolInTemp > 102;  // Check for overheating condition
-
-    // Update Nextion with coolant data
-    sendToNextionIfChanged("coolInTemp", String(coolInTemp), lastCoolInTemp, true);
-    sendToNextion("coolInText", "Coolant Inlet Temp", false);
-    sendToNextionIfChanged("coolOutTemp", String(coolOutTemp), lastCoolOutTemp, true);
-    sendToNextion("coolOutText", "Coolant Outlet Temp", false);
-
-    if (overheating) {
-      sendToNextion("overheatText", "Critical Warning: Coolant Overheating", false);
-    }
-
-  } else if (canId == 0x104) {  // Battery and Fuel data CAN ID
-    batteryVoltage = extractFloatFromBuffer(buf);  // Extract battery voltage
-    fuelUsed = extractFloatFromBuffer(buf + 4);    // Extract fuel used
-
-    sendToNextion("batteryVoltage", String(batteryVoltage), true);
-    sendToNextion("batteryText", "Battery Voltage", false);
-    sendToNextion("fuelUsed", String(fuelUsed), true);
-    sendToNextion("fuelUsedText", "Fuel Used", false);
-  }
 }
 
 // Helper function to convert CAN buffer to float
