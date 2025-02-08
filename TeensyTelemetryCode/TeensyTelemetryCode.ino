@@ -11,7 +11,7 @@ unsigned int gear;
 
 
 // Variables for tracking last sent values
-static String lastRPM, lastGear
+static String lastRPM, lastGear;
 
 // Timing variables
 unsigned long lastUpdateTime = 0;
@@ -60,6 +60,7 @@ void loop() {
   }
 }
 
+
 void receiveCANMessage() {
   unsigned long canId;
   unsigned char len = 0;
@@ -75,6 +76,7 @@ void receiveCANMessage() {
     // Send data to Nextion
     sendToNextionIfChanged("rpm", String(engnSpeed), lastRPM, true);
     sendToNextionIfChanged("gear", String(gear), lastGear, true);
+  }
 }
 
 // Helper function to convert CAN buffer to float
@@ -109,3 +111,6 @@ void sendToNextionIfChanged(const String& objectName, const String& value, Strin
     lastValue = value;  // Update the cached value
   }
 }
+
+
+
