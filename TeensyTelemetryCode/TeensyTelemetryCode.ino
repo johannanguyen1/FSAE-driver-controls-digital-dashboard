@@ -1,116 +1,124 @@
 #include <mcp_can.h>  // necessary for CAN Protocol communication commands
-#include <SPI.h>      // necessary for serial communication between the SPI devices and the MicroController
+#include <SPI.h>
 
-// Define the pins between the MCP2515 Board and the MicroController
 #define CS_Pin 10
-#define INTRPT_Pin 9  // or 0
+#define INTRPT_Pin 9  // Interrupt pin
 
-// Variables for data metrics
-unsigned int engnSpeed;  // RPM will be stored here as an integer
-unsigned int gear;
+struct CANMessage {
+  unsigned long id;
+  unsigned char len;
+  unsigned char buf[8];
+};
 
+#define BUFFER_SIZE 10  // Circular buffer size
+CANMessage canBuffer[BUFFER_SIZE];
+volatile int bufferHead = 0;
+volatile int bufferTail = 0;
 
-// Variables for tracking last sent values
-static String lastRPM, lastGear;
-
-// Timing variables
-unsigned long lastUpdateTime = 0;
-const unsigned long updateInterval = 200; // Update every 200ms
-
-// Flag to indicate CAN initialization
-bool can_initialized = false;
-
-// Create an instance of MCP_CAN with the CS pin
 MCP_CAN CAN(CS_Pin);
 
+unsigned long lastRPMUpdate = 0;
+unsigned long lastCoolantUpdate = 0;
+unsigned long lastBatteryUpdate = 0;
+const unsigned long rpmInterval = 500;
+const unsigned long coolantInterval = 2000;
+const unsigned long batteryInterval = 3000;
+
 void setup() {
-  // Input and Output pin setups
   pinMode(CS_Pin, OUTPUT);
   pinMode(INTRPT_Pin, INPUT);
-
-  // Initialize Serial for debugging
   Serial1.begin(9600);
 
-  // Start the CAN bus at 250 kbps (using MCP_CAN's specific start command)
   if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
-    can_initialized = true;
+    attachInterrupt(digitalPinToInterrupt(INTRPT_Pin), canISR, FALLING);
   } else {
-    while (1);  // Stop if CAN initialization fails
+    while (1);
   }
 
-  // Set CAN mode to normal operation
   CAN.setMode(MCP_NORMAL);
   delay(1000);
 }
 
 void loop() {
-  // Check for new CAN messages
-  if (CAN.checkReceive() == CAN_MSGAVAIL) {
-    receiveCANMessage();
+  processCANMessages();
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastRPMUpdate >= rpmInterval) {
+    sendRPM();
+    lastRPMUpdate = currentMillis;
   }
+  if (currentMillis - lastCoolantUpdate >= coolantInterval) {
+    sendCoolantTemp();
+    lastCoolantUpdate = currentMillis;
+  }
+  if (currentMillis - lastBatteryUpdate >= batteryInterval) {
+    sendBatteryFuel();
+    lastBatteryUpdate = currentMillis;
+  }
+}
 
-  // CAN re-initialization logic (if needed)
-  if (!can_initialized) {
-    if (millis() - lastUpdateTime > updateInterval) {
-      if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
-        can_initialized = true;
-      }
-      lastUpdateTime = millis();
+void canISR() {
+  if (CAN.checkReceive() == CAN_MSGAVAIL) {
+    CANMessage msg;
+    CAN.readMsgBuf(&msg.id, &msg.len, msg.buf);
+    int nextHead = (bufferHead + 1) % BUFFER_SIZE;
+    if (nextHead != bufferTail) {
+      canBuffer[bufferHead] = msg;
+      bufferHead = nextHead;
     }
   }
 }
 
-
-void receiveCANMessage() {
-  unsigned long canId;
-  unsigned char len = 0;
-  unsigned char buf[8];
-
-  CAN.readMsgBuf(&canId, &len, buf);
-
-  if (canId == 0x102) {  // Assuming 0x102 is the CAN ID for RPM and Gear data
-    engnSpeed = extractFloatFromBuffer(buf) / 6;  // Convert to RPM
-
-    gear = buf[7];  // Extract gear value
-
-    // Send data to Nextion
-    sendToNextionIfChanged("rpm", String(engnSpeed), lastRPM, true);
-    sendToNextionIfChanged("gear", String(gear), lastGear, true);
+void processCANMessages() {
+  while (bufferTail != bufferHead) {
+    CANMessage msg = canBuffer[bufferTail];
+    bufferTail = (bufferTail + 1) % BUFFER_SIZE;
+    handleCANMessage(msg);
   }
 }
 
-// Helper function to convert CAN buffer to float
+void handleCANMessage(CANMessage msg) {
+  if (msg.id == 0x102) {
+    rpm = extractFloatFromBuffer(msg.buf) / 6;
+    gear = msg.buf[7];
+  } else if (msg.id == 0x103) {
+    coolInTemp = extractFloatFromBuffer(msg.buf);
+    coolOutTemp = extractFloatFromBuffer(msg.buf + 4);
+    overheating = coolInTemp > 102;
+  } else if (msg.id == 0x104) {
+    batteryVoltage = extractFloatFromBuffer(msg.buf);
+    fuelUsed = extractFloatFromBuffer(msg.buf + 4);
+  }
+}
+
 float extractFloatFromBuffer(unsigned char* buf) {
   union {
     uint32_t bits;
     float number;
   } data;
-
   data.bits = (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3];
   return data.number;
 }
 
+void sendRPM() {
+  sendToNextion("rpm", String(rpm), true);
+  sendToNextion("gear", String(gear), true);
+}
+
+void sendCoolantTemp() {
+  sendToNextion("coolInTemp", String(coolInTemp), true);
+  sendToNextion("coolOutTemp", String(coolOutTemp), true);
+}
+
+void sendBatteryFuel() {
+  sendToNextion("batteryVoltage", String(batteryVoltage), true);
+  sendToNextion("fuelUsed", String(fuelUsed), true);
+}
+
 void sendToNextion(const String& objectName, const String& value, bool isNumeric) {
-  if (isNumeric) {
-    Serial1.print(objectName + ".val=");  // Command for setting numeric value
-    Serial1.print(value);                // Send the value as a number
-  } else {
-    Serial1.print(objectName + ".txt=\"");  // Command for setting text value
-    Serial1.print(value);                   // Send the value as a string
-    Serial1.print("\"");
-  }
-  // End of command sequence (required by Nextion protocol)
-  Serial1.write(0xFF);
-  Serial1.write(0xFF);
-  Serial1.write(0xFF);
+  // Serial1.print(objectName + (isNumeric ? ".val=" : ".txt=\"") + value + (isNumeric ? "" : "\""));
+  // Serial1.write(0xFF);
+  // Serial1.write(0xFF);
+  // Serial1.write(0xFF);
+
+  printf("%s: %s\n", objectName.c_str(), value.c_str());
 }
-
-void sendToNextionIfChanged(const String& objectName, const String& value, String& lastValue, bool isNumeric) {
-  if (value != lastValue) {  // Only update if the value has changed
-    sendToNextion(objectName, value, isNumeric);
-    lastValue = value;  // Update the cached value
-  }
-}
-
-
-
