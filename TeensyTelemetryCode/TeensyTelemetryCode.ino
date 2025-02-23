@@ -100,7 +100,24 @@ float extractFloatFromBuffer(unsigned char* buf) {
 }
 
 void sendRPM() {
-  sendToNextion("rpm", String(rpm), true);
+  rpm3dig = rpm/100; // change RPM from 13500 to 135
+  int rpm1, rpm2;
+  
+  if (rpm3dig <= 100) { // GREEN: 0-100 RPM
+    rpm1 = rpm3dig; 
+    rpm2 = 0; 
+  } else if (rpm3dig > 100) { // BLUE(Shift): 101-135 RPM
+    rpm1 = 100;
+    rpm2 = (rpm3dig % 100) * 100 / 35;
+      // Math explained: 
+      // (rpm3dig % 100) = 135 - 100
+      // y = 135 - 100   and x = ratio from y out of 35, to out of 100
+      // (y/35) = (x/100)
+      // 100(y/35) = x = rpm2
+      // NOTE: This will not work if the Arduino ends up recieving out-of-bound rpm values from MOTEC/CAN (out of bound is b<0 or b>135)
+  }
+  sendToNextion("rpm1", String(rpm1), true);
+  sendToNextion("rpm2", String(rpm2), true);
   sendToNextion("gear", String(gear), true);
 }
 
