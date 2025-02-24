@@ -24,6 +24,10 @@ const unsigned long rpmInterval = 500;
 const unsigned long coolantInterval = 2000;
 const unsigned long batteryInterval = 3000;
 
+unsigned int rpm, gear, coolInTemp, coolOutTemp, batteryVoltage, fuelUsed, rpm3dig;
+bool overheating;
+
+
 void setup() {
   pinMode(CS_Pin, OUTPUT);
   pinMode(INTRPT_Pin, INPUT);
@@ -83,10 +87,12 @@ void handleCANMessage(CANMessage msg) {
   } else if (msg.id == 0x103) {
     coolInTemp = extractFloatFromBuffer(msg.buf);
     coolOutTemp = extractFloatFromBuffer(msg.buf + 4);
-    overheating = coolInTemp > 102;
+    if (coolInTemp > 102) {
+      overheating = True;
+    }
   } else if (msg.id == 0x104) {
-    batteryVoltage = extractFloatFromBuffer(msg.buf);
-    fuelUsed = extractFloatFromBuffer(msg.buf + 4);
+    batteryVoltage = extractFloatFromBuffer(msg.buf) * 100;
+    fuelUsed = extractFloatFromBuffer(msg.buf + 4) * 100;
   }
 }
 
@@ -116,6 +122,7 @@ void sendRPM() {
       // 100(y/35) = x = rpm2
       // NOTE: This will not work if the Arduino ends up recieving out-of-bound rpm values from MOTEC/CAN (out of bound is b<0 or b>135)
   }
+  sendToNextion("rpm", String(rpm), true);
   sendToNextion("rpm1", String(rpm1), true);
   sendToNextion("rpm2", String(rpm2), true);
   sendToNextion("gear", String(gear), true);
@@ -124,6 +131,9 @@ void sendRPM() {
 void sendCoolantTemp() {
   sendToNextion("coolInTemp", String(coolInTemp), true);
   sendToNextion("coolOutTemp", String(coolOutTemp), true);
+  if (overheating) {
+    sendToNextion("overheating", "Overheating!", false);
+  }
 }
 
 void sendBatteryFuel() {
@@ -132,10 +142,9 @@ void sendBatteryFuel() {
 }
 
 void sendToNextion(const String& objectName, const String& value, bool isNumeric) {
-  // Serial1.print(objectName + (isNumeric ? ".val=" : ".txt=\"") + value + (isNumeric ? "" : "\""));
-  // Serial1.write(0xFF);
-  // Serial1.write(0xFF);
-  // Serial1.write(0xFF);
+  Serial1.print(objectName + (isNumeric ? ".val=" : ".txt=\"") + value + (isNumeric ? "" : "\""));
+  Serial1.write(0xFF);
+  Serial1.write(0xFF);
+  Serial1.write(0xFF);
 
-  printf("%s: %s\n", objectName.c_str(), value.c_str());
 }
