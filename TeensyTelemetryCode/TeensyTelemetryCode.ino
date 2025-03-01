@@ -88,7 +88,7 @@ void handleCANMessage(CANMessage msg) {
     coolInTemp = extractFloatFromBuffer(msg.buf);
     coolOutTemp = extractFloatFromBuffer(msg.buf + 4);
     if (coolInTemp > 102) {
-      overheating = True;
+      overheating = true;
     }
   } else if (msg.id == 0x104) {
     batteryVoltage = extractFloatFromBuffer(msg.buf) * 100;
