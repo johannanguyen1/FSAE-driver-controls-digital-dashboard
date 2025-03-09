@@ -107,7 +107,8 @@ float extractFloatFromBuffer(unsigned char* buf) {
 
 void sendRPM() {
   rpm3dig = rpm/100; // change RPM from 13500 to 135
-  
+
+  // NOTE: If out of bounds, meaning a value is sent less than 0 or greater than 100, nextion will recieve the val as 0 for the progress bar in question
   if (rpm3dig <= 100) { // GREEN: 0-100 RPM, Out of Bound ==> when less than 0, just sends 0 for both progress bars
     rpm1 = rpm3dig; 
     rpm2 = 0; 
@@ -115,11 +116,10 @@ void sendRPM() {
     rpm1 = 100;
     rpm2 = (rpm3dig % 100) * 100 / 35;
       // Math explained: 
-      // (rpm3dig % 100) = 135 - 100
-      // y = 135 - 100   and x = ratio from y out of 35, to out of 100
+      // (rpm3dig % 100) = 135 - 100 = 1 through 35
       // (y/35) = (x/100)
+      // y = 135 - 100   and   x = ratio from y out of 35, to out of 100 for the progress bar
       // 100(y/35) = x = rpm2
-      // NOTE: This will not work if the Arduino ends up recieving out-of-bound rpm values from MOTEC/CAN (out of bound is b<0 or b>135), if out of bound, nextion will recieve the val as 0
   } else if (rpm3dig > 135) { // Out of Bound ==> when RPM > 135, maxes out both progress bars
     rpm1, rpm2 = 100; 
   }
