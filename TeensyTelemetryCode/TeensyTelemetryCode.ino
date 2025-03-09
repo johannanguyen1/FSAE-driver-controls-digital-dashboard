@@ -22,9 +22,9 @@ unsigned long lastCoolantUpdate = 0;
 unsigned long lastBatteryUpdate = 0;
 const unsigned long rpmInterval = 500;
 const unsigned long coolantInterval = 2000;
-const unsigned long batteryInterval = 3000;
+const unsigned long batteryInterval = 5000;
 
-unsigned int rpm, gear, coolInTemp, coolOutTemp, batteryVoltage, fuelUsed, rpm3dig;
+unsigned int rpm, rpm1, rpm2, rpm3dig, gear, coolInTemp, coolOutTemp, batteryVoltage, fuelUsed;
 bool overheating;
 
 
@@ -107,12 +107,11 @@ float extractFloatFromBuffer(unsigned char* buf) {
 
 void sendRPM() {
   rpm3dig = rpm/100; // change RPM from 13500 to 135
-  int rpm1, rpm2;
   
-  if (rpm3dig <= 100) { // GREEN: 0-100 RPM
+  if (rpm3dig <= 100) { // GREEN: 0-100 RPM, Out of Bound ==> when less than 0, just sends 0 for both progress bars
     rpm1 = rpm3dig; 
     rpm2 = 0; 
-  } else if (rpm3dig > 100) { // BLUE(Shift): 101-135 RPM
+  } else if (135 >= rpm3dig > 100) { // RED(Shift): 101-135 RPM
     rpm1 = 100;
     rpm2 = (rpm3dig % 100) * 100 / 35;
       // Math explained: 
@@ -120,25 +119,27 @@ void sendRPM() {
       // y = 135 - 100   and x = ratio from y out of 35, to out of 100
       // (y/35) = (x/100)
       // 100(y/35) = x = rpm2
-      // NOTE: This will not work if the Arduino ends up recieving out-of-bound rpm values from MOTEC/CAN (out of bound is b<0 or b>135)
+      // NOTE: This will not work if the Arduino ends up recieving out-of-bound rpm values from MOTEC/CAN (out of bound is b<0 or b>135), if out of bound, nextion will recieve the val as 0
+  } else if (rpm3dig > 135) { // Out of Bound ==> when RPM > 135, maxes out both progress bars
+    rpm1, rpm2 = 100; 
   }
-  sendToNextion("rpm", String(rpm), true);
-  sendToNextion("rpm1", String(rpm1), true);
-  sendToNextion("rpm2", String(rpm2), true);
-  sendToNextion("gear", String(gear), true);
+  sendToNextion("rpm", rpm, true);
+  sendToNextion("rpm1", rpm1, true);
+  sendToNextion("rpm2", rpm2, true);
+  sendToNextion("gear", gear, true);
 }
 
 void sendCoolantTemp() {
-  sendToNextion("coolInTemp", String(coolInTemp), true);
-  sendToNextion("coolOutTemp", String(coolOutTemp), true);
+  sendToNextion("coolInTemp", coolInTemp), true);
+  sendToNextion("coolOutTemp", coolOutTemp, true);
   if (overheating) {
     sendToNextion("overheating", "Overheating!", false);
   }
 }
 
 void sendBatteryFuel() {
-  sendToNextion("batteryVoltage", String(batteryVoltage), true);
-  sendToNextion("fuelUsed", String(fuelUsed), true);
+  sendToNextion("batteryVoltage", batteryVoltage, true);
+  sendToNextion("fuelUsed", fuelUsed, true);
 }
 
 void sendToNextion(const String& objectName, const String& value, bool isNumeric) {
