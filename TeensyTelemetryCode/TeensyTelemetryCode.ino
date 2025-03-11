@@ -112,7 +112,7 @@ void sendRPM() {
   if (rpm3dig <= 100) { // GREEN: 0-100 RPM, Out of Bound ==> when less than 0, just sends 0 for both progress bars
     rpm1 = rpm3dig; 
     rpm2 = 0; 
-  } else if (135 >= rpm3dig > 100) { // RED(Shift): 101-135 RPM
+  } else if (135 >= rpm3dig || rpm3dig > 100) { // RED(Shift): 101-135 RPM
     rpm1 = 100;
     rpm2 = (rpm3dig % 100) * 100 / 35;
       // Math explained: 
@@ -130,7 +130,7 @@ void sendRPM() {
 }
 
 void sendCoolantTemp() {
-  sendToNextion("coolInTemp", coolInTemp), true);
+  sendToNextion("coolInTemp", coolInTemp, true);
   sendToNextion("coolOutTemp", coolOutTemp, true);
   if (overheating) {
     sendToNextion("overheating", "Overheating!", false);
