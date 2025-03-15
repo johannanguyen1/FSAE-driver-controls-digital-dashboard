@@ -36,6 +36,7 @@ void setup() {
   if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
     attachInterrupt(digitalPinToInterrupt(INTRPT_Pin), canISR, FALLING);
   } else {
+    sendErrorCase("#1 CAN Module not initialized");
     while (1);
   }
 
@@ -68,10 +69,16 @@ void canISR() {
     if (nextHead != bufferTail) {
       canBuffer[bufferHead] = msg;
       bufferHead = nextHead;
+      else {
+        sendErrorCase("#2 Buffer overflow, dropped");
+      }
     }
+  } else {
+    sendErrorCase("#5 CAN message not available");
   }
 }
 
+//-------------------SET VARIABLES FROM CAN PACKET-------------------------------------------
 void processCANMessages() {
   while (bufferTail != bufferHead) {
     CANMessage msg = canBuffer[bufferTail];
@@ -93,6 +100,8 @@ void handleCANMessage(CANMessage msg) {
   } else if (msg.id == 0x104) {
     batteryVoltage = extractFloatFromBuffer(msg.buf) * 100;
     fuelUsed = extractFloatFromBuffer(msg.buf + 4) * 100;
+  } else { //double check if this even needs to be an error case, or simply ignored
+    sendErrorCase("#4 handleCANMessage error");
   }
 }
 
@@ -105,9 +114,9 @@ float extractFloatFromBuffer(unsigned char* buf) {
   return data.number;
 }
 
+//--------------------SENDING VALUES TO NEXTION---------------------------------------------
 void sendRPM() {
   rpm3dig = rpm/100; // change RPM from 13500 to 135
-
   // NOTE: If out of bounds, meaning a value is sent less than 0 or greater than 100, nextion will recieve the val as 0 for the progress bar in question
   if (rpm3dig <= 100) { // GREEN: 0-100 RPM, Out of Bound ==> when less than 0, just sends 0 for both progress bars
     rpm1 = rpm3dig; 
@@ -128,7 +137,6 @@ void sendRPM() {
   sendToNextion("rpm2", rpm2, true);
   sendToNextion("gear", gear, true);
 }
-
 void sendCoolantTemp() {
   sendToNextion("coolInTemp", coolInTemp, true);
   sendToNextion("coolOutTemp", coolOutTemp, true);
@@ -136,7 +144,6 @@ void sendCoolantTemp() {
     sendToNextion("overheating", "Overheating!", false);
   }
 }
-
 void sendBatteryFuel() {
   sendToNextion("batteryVoltage", batteryVoltage, true);
   sendToNextion("fuelUsed", fuelUsed, true);
@@ -147,5 +154,17 @@ void sendToNextion(const String& objectName, const String& value, bool isNumeric
   Serial1.write(0xFF);
   Serial1.write(0xFF);
   Serial1.write(0xFF);
+}
 
+//--------------------SOMETHING FAILED, DISPLAY ERROR MESSAGE ON DASH--------------------------------------
+void sendErrorCase(const String& message) { // message must be 30 characters or LESS
+  sendToNextion("rpm1", 0, true);
+  sendToNextion("rpm2". 0, true);
+  sendToNextion("rpm", 0, true);
+  sendToNextion("gear", 0, true);
+  sendToNextion("batteryVoltage", 0, true);
+  sendToNextion("coolInTemp", 0, true);
+  sendToNextion("coolOutTemp", 0, true);
+  sendToNextion("fuelUsed", 0, true);
+  sentToNextion("overheating", message, false);
 }
