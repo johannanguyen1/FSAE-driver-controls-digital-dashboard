@@ -36,7 +36,7 @@ void setup() {
   if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
     attachInterrupt(digitalPinToInterrupt(INTRPT_Pin), canISR, FALLING);
   } else {
-    sendErrorCase("#1 CAN Module not initialized");
+    sendErrorCase("#3 CAN Module not initialized");
     while (1);
   }
 
@@ -70,11 +70,11 @@ void canISR() {
       canBuffer[bufferHead] = msg;
       bufferHead = nextHead;
       else {
-        sendErrorCase("#2 Buffer overflow, dropped");
+        sendErrorCase("#1 Buffer overflow, dropped"); //does this NEED to be an error message that pauses everything?
       }
     }
   } else {
-    sendErrorCase("#5 CAN message not available");
+    sendErrorCase("#2 CAN message not available"); //does this NEED to be an error message that pauses everything?
   }
 }
 
@@ -101,7 +101,7 @@ void handleCANMessage(CANMessage msg) {
     batteryVoltage = extractFloatFromBuffer(msg.buf) * 100;
     fuelUsed = extractFloatFromBuffer(msg.buf + 4) * 100;
   } else { //double check if this even needs to be an error case, or simply ignored
-    sendErrorCase("#4 handleCANMessage error");
+    //sendErrorCase("#4 message ids not found");
   }
 }
 
