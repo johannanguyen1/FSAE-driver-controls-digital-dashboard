@@ -130,7 +130,8 @@ void sendRPM() {
       // y = 135 - 100   and   x = ratio from y out of 35, to out of 100 for the progress bar
       // 100(y/35) = x = rpm2
   } else if (rpm3dig > 135) { // Out of Bound ==> when RPM > 135, maxes out both progress bars
-    rpm1, rpm2 = 100; 
+    rpm1 = 100;
+    rpm2 = 100; 
   }
   sendToNextion("rpm", rpm, true);
   sendToNextion("rpm1", rpm1, true);
