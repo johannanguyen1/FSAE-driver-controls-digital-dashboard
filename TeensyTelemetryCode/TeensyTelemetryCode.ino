@@ -69,9 +69,8 @@ void canISR() {
     if (nextHead != bufferTail) {
       canBuffer[bufferHead] = msg;
       bufferHead = nextHead;
-      else {
-        sendErrorCase("#1 Buffer overflow"); //does this NEED to be an error message?
-      }
+    } else {
+      sendErrorCase("#1 Buffer overflow"); //does this NEED to be an error message?
     }
   } else {
     sendErrorCase("#2 no CAN message"); //does this NEED to be an error message?
@@ -150,14 +149,14 @@ void sendBatteryFuel() {
   sendToNextion("fuelUsed", fuelUsed, true);
 }
 
+//--------------------SOMETHING FAILED, DISPLAY ERROR MESSAGE ON DASH--------------------------------------
+void sendErrorCase(const String& message) { // message must be 30 characters or LESS
+  sendToNextion("overheating", message, false);
+}
+
 void sendToNextion(const String& objectName, const String& value, bool isNumeric) {
   Serial1.print(objectName + (isNumeric ? ".val=" : ".txt=\"") + value + (isNumeric ? "" : "\""));
   Serial1.write(0xFF);
   Serial1.write(0xFF);
   Serial1.write(0xFF);
-}
-
-//--------------------SOMETHING FAILED, DISPLAY ERROR MESSAGE ON DASH--------------------------------------
-void sendErrorCase(const String& message) { // message must be 30 characters or LESS
-  sentToNextion("overheating", message, false);
 }
