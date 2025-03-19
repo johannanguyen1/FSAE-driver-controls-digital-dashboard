@@ -70,11 +70,11 @@ void canISR() {
       canBuffer[bufferHead] = msg;
       bufferHead = nextHead;
       else {
-        sendErrorCase("#1 Buffer overflow, dropped"); //does this NEED to be an error message that pauses everything?
+        sendErrorCase("#1 Buffer overflow"); //does this NEED to be an error message?
       }
     }
   } else {
-    sendErrorCase("#2 CAN message not available"); //does this NEED to be an error message that pauses everything?
+    sendErrorCase("#2 no CAN message"); //does this NEED to be an error message?
   }
 }
 
@@ -100,9 +100,9 @@ void handleCANMessage(CANMessage msg) {
   } else if (msg.id == 0x104) {
     batteryVoltage = extractFloatFromBuffer(msg.buf) * 100;
     fuelUsed = extractFloatFromBuffer(msg.buf + 4) * 100;
-  } else { //double check if this even needs to be an error case, or simply ignored
-    //sendErrorCase("#4 message ids not found");
-  }
+  } //else { //double check if this even needs to be an error case, or simply ignored
+    //sendErrorCase("#4 ids not found"); // message ids not found
+  //}
 }
 
 float extractFloatFromBuffer(unsigned char* buf) {
@@ -142,7 +142,7 @@ void sendCoolantTemp() {
   sendToNextion("coolInTemp", coolInTemp, true);
   sendToNextion("coolOutTemp", coolOutTemp, true);
   if (overheating) {
-    sendToNextion("overheating", "Overheating!", false);
+    sendToNextion("overheating", "!!!!!!!!Overheating!!!!!!!!", false);
   }
 }
 void sendBatteryFuel() {
@@ -159,13 +159,5 @@ void sendToNextion(const String& objectName, const String& value, bool isNumeric
 
 //--------------------SOMETHING FAILED, DISPLAY ERROR MESSAGE ON DASH--------------------------------------
 void sendErrorCase(const String& message) { // message must be 30 characters or LESS
-  sendToNextion("rpm1", 0, true);
-  sendToNextion("rpm2". 0, true);
-  sendToNextion("rpm", 0, true);
-  sendToNextion("gear", 0, true);
-  sendToNextion("batteryVoltage", 0, true);
-  sendToNextion("coolInTemp", 0, true);
-  sendToNextion("coolOutTemp", 0, true);
-  sendToNextion("fuelUsed", 0, true);
   sentToNextion("overheating", message, false);
 }
