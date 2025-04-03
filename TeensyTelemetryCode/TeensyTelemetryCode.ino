@@ -1,3 +1,11 @@
+// ISSUES with current code
+// 1) rpm worked fine before the function for the sendErrorCase() was added but is now unreliable, why?
+// 2) dash turns off while car starts the motor. assume the car pulls all power for this and since the dash is on the same 
+//    power source, it loses power for a second, then turns back on (this has been an issue from the start, working on an 
+//    isolated power supply)
+// 3) gear unreliable? sensor is now on the car but not accurate (maybe using wrong id?)
+// 4) sometimes car will start, dash will update but then freeze, why?
+
 #include <mcp_can.h>  // necessary for CAN Protocol communication commands
 #include <SPI.h>
 
@@ -61,7 +69,6 @@ void loop() {
     lastBatteryUpdate = currentMillis;
   }
   if (currentMillis - lastGearUpdate >= gearInterval) {
-    gear = readGearSensor();
     sendGear();
     lastGearUpdate = currentMillis;
   }
@@ -95,6 +102,7 @@ void processCANMessages() {
 void handleCANMessage(CANMessage msg) {
   if (msg.id == 0x102) {
     rpm = extractFloatFromBuffer(msg.buf) / 6;
+    gear = msg.buf[7];
   } else if (msg.id == 0x103) {
     coolInTemp = extractFloatFromBuffer(msg.buf);
     coolOutTemp = extractFloatFromBuffer(msg.buf + 4);
@@ -150,7 +158,7 @@ void sendBatteryFuel() {
   sendToNextion("fuelUsed", fuelUsed, true);
 }
 
-
+/* don't need this since gear position sensor passes through the motec
 // need to calibrate gps first and change bounds for each gear
 int readGearSensor() {
   int total = 0;
@@ -167,13 +175,16 @@ int readGearSensor() {
   else if (gearSensor <= 1023) return 6;
   return 0;
 }
+*/
 
 void sendGear() {
   sendToNextion("gear", gear, true);
 }
 
+
 //--------------------SOMETHING FAILED, DISPLAY ERROR MESSAGE ON DASH--------------------------------------
 // message must be 30 characters or LESS
+// this is for debugging purposes, but lowkey might be making things worse...
 void sendErrorCase(const String& message) {
   sendToNextion("overheating", message, false);
 }
