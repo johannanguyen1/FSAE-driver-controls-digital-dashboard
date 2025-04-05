@@ -1,5 +1,5 @@
 // ISSUES with current code
-// 1) rpm worked fine before the function for the sendErrorCase() was added but is now unreliable, why?
+// 1) rpm worked fine before the function for the sendErrorCase() was added but is now unreliable, why? (in the meantime, commented out)
 // 2) dash turns off while car starts the motor. assume the car pulls all power for this and since the dash is on the same 
 //    power source, it loses power for a second, then turns back on (this has been an issue from the start, working on an 
 //    isolated power supply)
@@ -45,7 +45,7 @@ void setup() {
   if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
     attachInterrupt(digitalPinToInterrupt(INTRPT_Pin), canISR, FALLING);
   } else {
-    sendErrorCase("#3 CAN Module not initialized");
+    // sendErrorCase("#3 CAN Module not initialized");
     while (1);
   }
 
@@ -82,12 +82,12 @@ void canISR() {
     if (nextHead != bufferTail) {
       canBuffer[bufferHead] = msg;
       bufferHead = nextHead;
-    } else {
-      sendErrorCase("#1 Buffer overflow"); //does this NEED to be an error message?
-    }
-  } else {
-    sendErrorCase("#2 no CAN message"); //does this NEED to be an error message?
-  }
+    } //else {
+      //sendErrorCase("#1 Buffer overflow"); //does this NEED to be an error message?
+    //}
+  } //else {
+    //sendErrorCase("#2 no CAN message"); //does this NEED to be an error message?
+  //}
 }
 
 //-------------------SET VARIABLES FROM CAN PACKET-------------------------------------------
@@ -185,9 +185,9 @@ void sendGear() {
 //--------------------SOMETHING FAILED, DISPLAY ERROR MESSAGE ON DASH--------------------------------------
 // message must be 30 characters or LESS
 // this is for debugging purposes, but lowkey might be making things worse...
-void sendErrorCase(const String& message) {
-  sendToNextion("overheating", message, false);
-}
+//void sendErrorCase(const String& message) {
+//  sendToNextion("overheating", message, false);
+//}
 
 void sendToNextion(const String& objectName, const String& value, bool isNumeric) {
   Serial1.print(objectName + (isNumeric ? ".val=" : ".txt=\"") + value + (isNumeric ? "" : "\"""));
