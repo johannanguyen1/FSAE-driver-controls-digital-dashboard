@@ -3,8 +3,7 @@
 // 2) dash turns off while car starts the motor. assume the car pulls all power for this and since the dash is on the same 
 //    power source, it loses power for a second, then turns back on (this has been an issue from the start, working on an 
 //    isolated power supply)
-// 3) gear unreliable? sensor is now on the car but not accurate (maybe using wrong id?)
-// 4) sometimes car will start, dash will update but then freeze, why?
+// 4) sometimes car will start, dash will update but then freeze, why? (not really an issue anymore)
 
 #include <mcp_can.h>  // necessary for CAN Protocol communication commands
 #include <SPI.h>
