@@ -190,7 +190,7 @@ void sendGear() {
 //}
 
 void sendToNextion(const String& objectName, const String& value, bool isNumeric) {
-  Serial1.print(objectName + (isNumeric ? ".val=" : ".txt=\"") + value + (isNumeric ? "" : "\"""));
+  Serial1.print(objectName + (isNumeric ? ".val=" : ".txt=\"") + value + (isNumeric ? "" : "\""));
   Serial1.write(0xFF);
   Serial1.write(0xFF);
   Serial1.write(0xFF);
