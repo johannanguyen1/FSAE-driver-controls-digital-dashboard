@@ -11,6 +11,8 @@
 
 #define CS_Pin 10
 #define INTRPT_Pin 9  // Interrupt pin
+//#define Page_Pin 23  // assign any analog pin on the teensy
+
 
 struct CANMessage {
   unsigned long id;
@@ -34,18 +36,19 @@ const unsigned long coolantInterval = 2000;
 const unsigned long batteryInterval = 5000;
 const unsigned long gearInterval = 500;
 
+// unsigned int current_page = 0;
 unsigned int rpm, rpm1, rpm2, rpm3dig, gear, coolInTemp, coolOutTemp, batteryVoltage, fuelUsed;
 bool overheating;
 
 void setup() {
   pinMode(CS_Pin, OUTPUT);
   pinMode(INTRPT_Pin, INPUT);
+  //pinMode(Page_Pin, INPUT); // for changing the page
   Serial1.begin(9600);
 
   if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
     attachInterrupt(digitalPinToInterrupt(INTRPT_Pin), canISR, FALLING);
   } else {
-    // sendErrorCase("#3 CAN Module not initialized");
     while (1);
   }
 
@@ -54,6 +57,14 @@ void setup() {
 }
 
 void loop() {
+  // add code here to read analoug pin for changing pages
+  /* Something like:
+    pageVal = analogRead(Page_Pin);
+    if (pageVal != current_page) {
+      current_page = analogRead(Page_Pin);
+      Serial1.print("page" + String(current_page)); Serial1.write(0xFF); Serial1.write(0xFF); Serial1.write(0xFF);
+    }
+  */
   processCANMessages();
   unsigned long currentMillis = millis();
   if (currentMillis - lastRPMUpdate >= rpmInterval) {
