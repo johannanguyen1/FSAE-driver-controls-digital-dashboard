@@ -17,14 +17,13 @@ volatile int bufferTail = 0;
 
 MCP_CAN CAN(CS_Pin);
 
-unsigned long lastRPMUpdate = 0;
-unsigned long lastCoolantUpdate = 0;
-unsigned long lastBatteryUpdate = 0;
-unsigned long lastGearUpdate = 0;
-const unsigned long rpmInterval = 500;
-const unsigned long coolantInterval = 2000;
-const unsigned long batteryInterval = 5000;
-const unsigned long gearInterval = 500;
+unsigned long last500Update = 0;  // 0.5 seconds
+unsigned long last2000Update = 0;  // 2.0 seconds
+unsigned long last5000Update = 0;  // 5.0 seconds
+const unsigned long interval500 = 500;
+const unsigned long interval2000 = 500;
+const unsigned long interval5000 = 500;
+
 
 unsigned int rpm, rpm1, rpm2, rpm3dig, gear, coolInTemp, coolOutTemp, batteryVoltage, fuelUsed;
 bool overheating;
@@ -59,21 +58,18 @@ void loop() {
 
   processCANMessages();
   unsigned long currentMillis = millis();
-  if (currentMillis - lastRPMUpdate >= rpmInterval) { //RPM
+  if (currentMillis - last500Update >= interval500) { // 500 - RPM, gear
     sendRPM();
-    lastRPMUpdate = currentMillis;
-  }
-  if (currentMillis - lastCoolantUpdate >= coolantInterval) {
-    sendCoolantTemp();
-    lastCoolantUpdate = currentMillis;
-  }
-  if (currentMillis - lastBatteryUpdate >= batteryInterval) {
-    sendBatteryFuel();
-    lastBatteryUpdate = currentMillis;
-  }
-  if (currentMillis - lastGearUpdate >= gearInterval) {
     sendGear();
-    lastGearUpdate = currentMillis;
+    last500Update = currentMillis;
+  }
+  if (currentMillis - last2000Update >= interval2000) { // 2000 - coolant
+    sendCoolantTemp();
+    last2000Update = currentMillis;
+  }
+  if (currentMillis - last5000Update >= interval5000) { // 5000 - battery
+    sendBatteryFuel();
+    last5000Update = currentMillis;
   }
 }
 
