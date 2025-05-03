@@ -30,8 +30,8 @@ unsigned int rpm, rpm1, rpm2, rpm3dig, gear, coolInTemp, coolOutTemp, batteryVol
 bool overheating;
 
 // Page Values
-const int page_Pin = A9; // Analog pin for Page Dial
-unsigned int last_page = -1;
+const int pagePin = A9; // Analog pin for Page Dial
+unsigned int lastPage = -1;
 
 void setup() {
   pinMode(CS_Pin, OUTPUT);
@@ -50,10 +50,10 @@ void setup() {
 
 void loop() {
   // Change Pages w/ dial
-  float pageVolt = analogRead(Page_Pin) * (3.3 / 1023.0); // from 0 to 1023 --> from 0.0 to 3.3
-  int currentPage = (pageVolt < 1.65) ? 0 : 1; // page0: <1.65  page2>=1.65
-  if (currentPage != last_page) { 
-    Serial1.print("page" + String(currentPafe)); Serial1.write(0xFF); Serial1.write(0xFF); Serial1.write(0xFF);
+  float pageVolt = analogRead(pagePin) * (3.3 / 1023.0); // from 0 to 1023 --> from 0.0 to 3.3
+  unsigned int currentPage = (pageVolt < 1.65) ? 0 : 1; // page0: <1.65  page2>=1.65
+  if (currentPage != lastPage) { 
+    Serial1.print("page" + String(currentPage)); Serial1.write(0xFF); Serial1.write(0xFF); Serial1.write(0xFF);
     lastPage = currentPage;
   }
 
