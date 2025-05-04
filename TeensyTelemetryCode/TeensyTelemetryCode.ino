@@ -28,15 +28,15 @@ volatile int bufferTail = 0;
 
 MCP_CAN CAN(CS_Pin);
 
-unsigned long last500Update = 0;  // 0.5 seconds
+unsigned long last300Update = 0;  // 0.3 seconds
 unsigned long last2000Update = 0;  // 2.0 seconds
 unsigned long last5000Update = 0;  // 5.0 seconds
-const unsigned long interval500 = 500;
+const unsigned long interval300 = 300;
 const unsigned long interval2000 = 2000;
 const unsigned long interval5000 = 5000;
 
 unsigned int rpm, rpm1, rpm2, rpm3dig, gear, coolInTemp, coolOutTemp, batteryVoltage, fuelUsed;
-bool overheating;
+//bool overheating;
 
 // Page Values
 const int pagePin = A9; // Analog pin for Page Dial
@@ -57,8 +57,8 @@ void setup() {
   delay(1000);
 
   // assign testing page's data points
-  sendToNextion("nameB2", "", false); sendToNextion("nameB3", "", false); sendToNextion("nameB4", "", false);
-  sendToNextion("nameC1", "", false); sendToNextion("nameC2", "", false); sendToNextion("nameC3", "", false); sendToNextion("nameC4", "", false);
+  sendToNextion("nameB2", "Battery", false); sendToNextion("nameB3", "CoolIn", false); sendToNextion("nameB4", "CoolOut", false);
+  sendToNextion("nameC1", "FuelUsed", false); sendToNextion("nameC2", "", false); sendToNextion("nameC3", "", false); sendToNextion("nameC4", "", false);
   sendToNextion("nameD1", "", false); sendToNextion("nameD2", "", false); sendToNextion("nameD3", "", false); sendToNextion("nameD4", "", false);
 }
 
@@ -73,10 +73,10 @@ void loop() {
 
   processCANMessages();
   unsigned long currentMillis = millis();
-  if (currentMillis - last500Update >= interval500) { // 500 - RPM, gear
+  if (currentMillis - last300Update >= interval300) { // 300 - RPM, gear
     sendRPM();
     sendGear();
-    last500Update = currentMillis;
+    last300Update = currentMillis;
   }
   if (currentMillis - last2000Update >= interval2000) { // 2000 - coolant
     sendCoolantTemp();
@@ -111,19 +111,6 @@ void processCANMessages() {
 }
 
 void handleCANMessage(CANMessage msg) {
-  /*if (msg.id == 0x102) {
-    rpm = extractFloatFromBuffer(msg.buf) / 6;
-    gear = msg.buf[7];
-  } else if (msg.id == 0x103) {
-    coolInTemp = extractFloatFromBuffer(msg.buf);
-    coolOutTemp = extractFloatFromBuffer(msg.buf + 4);
-    if (coolInTemp > 102) {
-      overheating = true;
-    }
-  } else if (msg.id == 0x104) {
-    batteryVoltage = extractFloatFromBuffer(msg.buf) * 100;
-    fuelUsed = extractFloatFromBuffer(msg.buf + 4) * 100;
-  }*/
   switch (msg.id) {
     case 0x102:
       rpm = extractFloatFromBuffer(msg.buf) / 6;
@@ -172,22 +159,19 @@ void sendRPM() {
   sendToNextion("rpm1", rpm1, true);
   sendToNextion("rpm2", rpm2, true);
 }
-
 void sendCoolantTemp() {
-  sendToNextion("coolInTemp", coolInTemp, true);
-  sendToNextion("coolOutTemp", coolOutTemp, true);
-  if (overheating) {
-    sendToNextion("overheating", "!!!!!!!!Overheating!!!!!!!!", false);
-  }
+  sendToNextion("b3", coolInTemp, false);
+  sendToNextion("b4", coolOutTemp, false);
+  //if (overheating) {
+  //  sendToNextion("overheating", "!!!!!!!!Overheating!!!!!!!!", false);
+  //}
 }
-
 void sendBattery() {
-  sendToNextion("batteryVoltage", batteryVoltage, true);
+  sendToNextion("batteryVoltage", batteryVoltage, false);
 }
 void sendFuel() {
-  sendToNextion("fuelUsed", fuelUsed, true);
+  sendToNextion("c1", fuelUsed, false);
 }
-
 void sendGear() {
   sendToNextion("gear", gear, true);
 }
