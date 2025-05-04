@@ -1,3 +1,13 @@
+/*
+
+Current ifs:
+
+- need to fix the cooling code, calculations, etc
+  - page1: p1.aph=127
+  - page2: idk, txt box plus objects???
+- need to understand the whole fuel thing
+
+*/
 #include <mcp_can.h>  // necessary for CAN Protocol communication commands
 #include <SPI.h>
 
@@ -24,7 +34,6 @@ const unsigned long interval500 = 500;
 const unsigned long interval2000 = 500;
 const unsigned long interval5000 = 500;
 
-
 unsigned int rpm, rpm1, rpm2, rpm3dig, gear, coolInTemp, coolOutTemp, batteryVoltage, fuelUsed;
 bool overheating;
 
@@ -45,6 +54,11 @@ void setup() {
 
   CAN.setMode(MCP_NORMAL);
   delay(1000);
+
+  // assign testing page's data points
+  sendToNextion("nameB2", "", false); sendToNextion("nameB3", "", false); sendToNextion("nameB4", "", false);
+  sendToNextion("nameC1", "", false); sendToNextion("nameC2", "", false); sendToNextion("nameC3", "", false); sendToNextion("nameC4", "", false);
+  sendToNextion("nameD1", "", false); sendToNextion("nameD2", "", false); sendToNextion("nameD3", "", false); sendToNextion("nameD4", "", false);
 }
 
 void loop() {
@@ -67,8 +81,9 @@ void loop() {
     sendCoolantTemp();
     last2000Update = currentMillis;
   }
-  if (currentMillis - last5000Update >= interval5000) { // 5000 - battery
-    sendBatteryFuel();
+  if (currentMillis - last5000Update >= interval5000) { // 5000 - battery, fuel
+    sendBattery();
+    sendFuel();
     last5000Update = currentMillis;
   }
 }
@@ -95,7 +110,7 @@ void processCANMessages() {
 }
 
 void handleCANMessage(CANMessage msg) {
-  if (msg.id == 0x102) {
+  /*if (msg.id == 0x102) {
     rpm = extractFloatFromBuffer(msg.buf) / 6;
     gear = msg.buf[7];
   } else if (msg.id == 0x103) {
@@ -107,7 +122,27 @@ void handleCANMessage(CANMessage msg) {
   } else if (msg.id == 0x104) {
     batteryVoltage = extractFloatFromBuffer(msg.buf) * 100;
     fuelUsed = extractFloatFromBuffer(msg.buf + 4) * 100;
-  } 
+  }*/
+  switch (msg.id) {
+    case 0x102:
+      rpm = extractFloatFromBuffer(msg.buf) / 6;
+      gear = msg.buf[7];
+      break;
+    case 0x103:
+      coolInTemp = extractFloatFromBuffer(msg.buf);
+      coolOutTemp = extractFloatFromBuffer(msg.buf + 4);
+      /* do calculations here to determine if there is overheating or wtv
+         important information is retrievable from the two temp values
+      if (coolInTemp > 102) {
+        overheating = true;
+      }
+      */
+      break;
+    case 0x104:
+      batteryVoltage = extractFloatFromBuffer(msg.buf) * 100;
+      fuelUsed = extractFloatFromBuffer(msg.buf + 4) * 100;
+      break;
+  }
 }
 
 float extractFloatFromBuffer(unsigned char* buf) {
@@ -145,8 +180,10 @@ void sendCoolantTemp() {
   }
 }
 
-void sendBatteryFuel() {
+void sendBattery() {
   sendToNextion("batteryVoltage", batteryVoltage, true);
+}
+void sendFuel() {
   sendToNextion("fuelUsed", fuelUsed, true);
 }
 
