@@ -32,8 +32,8 @@ unsigned long last500Update = 0;  // 0.5 seconds
 unsigned long last2000Update = 0;  // 2.0 seconds
 unsigned long last5000Update = 0;  // 5.0 seconds
 const unsigned long interval500 = 500;
-const unsigned long interval2000 = 500;
-const unsigned long interval5000 = 500;
+const unsigned long interval2000 = 2000;
+const unsigned long interval5000 = 5000;
 
 unsigned int rpm, rpm1, rpm2, rpm3dig, gear, coolInTemp, coolOutTemp, batteryVoltage, fuelUsed;
 bool overheating;
