@@ -2,6 +2,12 @@
 
 Current ifs:
 
+___________________________________________________________________
+___________________________________________________________________
+___________CHANGE THE "p1" OBJECT ON PAGE 1 TO "warning"___________
+___________________________________________________________________
+
+
 - need to fix the cooling code, calculations, etc
   - page1: p1.aph=127
   - page2: idk, txt box plus objects???
@@ -29,14 +35,13 @@ volatile int bufferTail = 0;
 MCP_CAN CAN(CS_Pin);
 
 unsigned long last300Update = 0;  // 0.3 seconds
-unsigned long last2000Update = 0;  // 2.0 seconds
+unsigned long last1000Update = 0;  // 1.0 seconds
 unsigned long last5000Update = 0;  // 5.0 seconds
 const unsigned long interval300 = 300;
-const unsigned long interval2000 = 2000;
+const unsigned long interval1000 = 1000;
 const unsigned long interval5000 = 5000;
 
 unsigned int rpm, rpm1, rpm2, rpm3dig, gear, coolInTemp, coolOutTemp, batteryVoltage, fuelUsed;
-//bool overheating;
 
 // Page Values
 const int pagePin = A9; // Analog pin for Page Dial
@@ -78,9 +83,9 @@ void loop() {
     sendGear();
     last300Update = currentMillis;
   }
-  if (currentMillis - last2000Update >= interval2000) { // 2000 - coolant
+  if (currentMillis - last1000Update >= interval1000) { // 1000 - coolant
     sendCoolantTemp();
-    last2000Update = currentMillis;
+    last1000Update = currentMillis;
   }
   if (currentMillis - last5000Update >= interval5000) { // 5000 - battery, fuel
     sendBattery();
@@ -119,12 +124,6 @@ void handleCANMessage(CANMessage msg) {
     case 0x103:
       coolInTemp = extractFloatFromBuffer(msg.buf);
       coolOutTemp = extractFloatFromBuffer(msg.buf + 4);
-      /* do calculations here to determine if there is overheating or wtv
-         important information is retrievable from the two temp values
-      if (coolInTemp > 102) {
-        overheating = true;
-      }
-      */
       break;
     case 0x104:
       batteryVoltage = extractFloatFromBuffer(msg.buf) * 100;
@@ -162,12 +161,16 @@ void sendRPM() {
 void sendCoolantTemp() {
   sendToNextion("b3", coolInTemp, false);
   sendToNextion("b4", coolOutTemp, false);
-  //if (overheating) {
-  //  sendToNextion("overheating", "!!!!!!!!Overheating!!!!!!!!", false);
-  //}
+  if (coolInTemp > 99.0) {
+    sendToNextion("a2", "OVERHEATING", false);
+    Serial1.print("warning.aph=127"); Serial1.write(0xFF); Serial1.write(0xFF); Serial1.write(0xFF);
+  } else { 
+    sendToNextion("a2", "", false);
+    Serial1.print("warning.aph=0"); Serial1.write(0xFF); Serial1.write(0xFF); Serial1.write(0xFF);
+  }
 }
 void sendBattery() {
-  sendToNextion("b2", batteryVoltage, false);
+  sendToNextion("batteryVoltage", batteryVoltage, false);
 }
 void sendFuel() {
   sendToNextion("c1", fuelUsed, false);
