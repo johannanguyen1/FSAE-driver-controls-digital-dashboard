@@ -6,6 +6,7 @@ Current ifs:
   - page1: p1.aph=127
   - page2: idk, txt box plus objects???
 - need to understand the whole fuel thing
+- need to add the rest of the sensors for page 2
 
 */
 #include <mcp_can.h>  // necessary for CAN Protocol communication commands
