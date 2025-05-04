@@ -167,7 +167,7 @@ void sendCoolantTemp() {
   //}
 }
 void sendBattery() {
-  sendToNextion("batteryVoltage", batteryVoltage, false);
+  sendToNextion("b2", batteryVoltage, false);
 }
 void sendFuel() {
   sendToNextion("c1", fuelUsed, false);
