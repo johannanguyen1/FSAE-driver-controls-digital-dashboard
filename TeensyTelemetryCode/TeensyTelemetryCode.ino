@@ -146,8 +146,8 @@ void sendRPM() {
     rpm1 = 100;
     rpm2 = 100;
   }
-  sendToNextion("rpmP1", rpm, true);
-  sendToNextion("rpmP2", rpm, true);
+  sendToNextion("rpmP1", rpm, false);
+  sendToNextion("rpmP2", rpm, false);
   sendToNextion("rpm1", rpm1, true);
   sendToNextion("rpm2", rpm2, true);
 }
