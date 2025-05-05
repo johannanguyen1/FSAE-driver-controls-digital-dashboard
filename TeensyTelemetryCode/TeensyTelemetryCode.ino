@@ -2,15 +2,7 @@
 
 Current ifs:
 
-___________________________________________________________________
-___________________________________________________________________
-___________CHANGE THE "p1" OBJECT ON PAGE 1 TO "warning"___________
-___________________________________________________________________
-
-
 - need to fix the cooling code, calculations, etc
-  - page1: p1.aph=127
-  - page2: idk, txt box plus objects???
 - need to understand the whole fuel thing
 - need to add the rest of the sensors for page 2
 
@@ -126,8 +118,8 @@ void handleCANMessage(CANMessage msg) {
       coolOutTemp = extractFloatFromBuffer(msg.buf + 4);
       break;
     case 0x104:
-      batteryVoltage = extractFloatFromBuffer(msg.buf) * 100;
-      fuelUsed = extractFloatFromBuffer(msg.buf + 4) * 100;
+      batteryVoltage = extractFloatFromBuffer(msg.buf);
+      fuelUsed = extractFloatFromBuffer(msg.buf + 4);
       break;
   }
 }
@@ -154,7 +146,8 @@ void sendRPM() {
     rpm1 = 100;
     rpm2 = 100;
   }
-  sendToNextion("rpm", rpm, true);
+  sendToNextion("rpmP1", rpm, true);
+  sendToNextion("rpmP2", rpm, true);
   sendToNextion("rpm1", rpm1, true);
   sendToNextion("rpm2", rpm2, true);
 }
@@ -176,7 +169,8 @@ void sendFuel() {
   sendToNextion("c1", fuelUsed, false);
 }
 void sendGear() {
-  sendToNextion("gear", gear, true);
+  sendToNextion("gearP1", gear, true);
+  sendToNextion("gearP2", gear, true);
 }
 
 void sendToNextion(const String& objectName, const String& value, bool isNumeric) {
