@@ -3,7 +3,6 @@
 Current ifs:
 
 - need to fix the cooling code, calculations, etc
-- need to understand the whole fuel thing
 - need to add the rest of the sensors for page 2
 
 */
@@ -34,13 +33,12 @@ const unsigned long interval1000 = 1000;
 const unsigned long interval5000 = 5000;
 
 unsigned int rpm, rpm1, rpm2, rpm3dig, gear, coolInTemp, coolOutTemp, batteryVoltage, fuelUsed;
+volatile bool canFlag = false;
+
 
 // Page Values
 const int pagePin = A9; // Analog pin for Page Dial
-int lastPage = 0;
-int currentPage;
-const float lowerThreshold = 1.55; // Switch to page 0 if voltage drops below this
-const float upperThreshold = 1.75; // Switch to page 1 if voltage rises above this
+unsigned int lastPage = -1;
 
 void setup() {
   pinMode(CS_Pin, OUTPUT);
@@ -55,26 +53,34 @@ void setup() {
 
   CAN.setMode(MCP_NORMAL);
   delay(1000);
+
+  // assign testing page's data points
+  sendToNextion("nameB2", "Battery", false); sendToNextion("nameB3", "CoolIn", false); sendToNextion("nameB4", "CoolOut", false);
+  sendToNextion("nameC1", "FuelUsed", false); sendToNextion("nameC2", "", false); sendToNextion("nameC3", "", false); sendToNextion("nameC4", "", false);
+  sendToNextion("nameD1", "", false); sendToNextion("nameD2", "", false); sendToNextion("nameD3", "", false); sendToNextion("nameD4", "", false);
 }
 
 void loop() {
   // Change Pages w/ dial
   float pageVolt = analogRead(pagePin) * (3.3 / 1023.0); // from 0 to 1023 --> from 0.0 to 3.3
-  currentPage = lastPage; // makes it so that if its in the deadzone (1.6-1.7), its page 1           
-  if (currentPage == 0 && pageVolt > upperThreshold) { // hysterisis to prevent flipping around the threshold
-    currentPage = 1;
-  } else if (currentPage == 1 && pageVolt < lowerThreshold) {
-    currentPage = 0;
-  }
+  unsigned int currentPage = (pageVolt < 1.65) ? 0 : 1; // page0: <1.65  page2>=1.65
   if (currentPage != lastPage) { 
     Serial1.print("page" + String(currentPage)); Serial1.write(0xFF); Serial1.write(0xFF); Serial1.write(0xFF);
     lastPage = currentPage;
-    /* assign testing page's data points:
-    sendToNextion("nameB2", "Battery", false); sendToNextion("nameB3", "CoolIn", false); sendToNextion("nameB4", "CoolOut", false);
-    sendToNextion("nameC1", "FuelUsed", false); 
-    */
-    sendToNextion("nameC2", "Test", false); sendToNextion("nameC3", "Test", false); sendToNextion("nameC4", "Test", false);
-    sendToNextion("nameD1", "Test", false); sendToNextion("nameD2", "Test", false); sendToNextion("nameD3", "Test", false); sendToNextion("nameD4", "Test", false);
+  }
+
+  // read CAN messages if interrupt has triggered
+  if (canFlag) {
+    canFlag = false;
+    while (CAN.checkReceive() == CAN_MSGAVAIL) {
+      CANMessage msg;
+      CAN.readMsgBuf(&msg.id, &msg.len, msg.buf);
+      int nextHead = (bufferHead + 1) % BUFFER_SIZE;
+      if (nextHead != bufferTail) {
+        canBuffer[bufferHead] = msg;
+        bufferHead = nextHead;
+      }
+    }
   }
 
   processCANMessages();
@@ -96,16 +102,9 @@ void loop() {
 }
 
 void canISR() {
-  if (CAN.checkReceive() == CAN_MSGAVAIL) {
-    CANMessage msg;
-    CAN.readMsgBuf(&msg.id, &msg.len, msg.buf);
-    int nextHead = (bufferHead + 1) % BUFFER_SIZE;
-    if (nextHead != bufferTail) {
-      canBuffer[bufferHead] = msg;
-      bufferHead = nextHead;
-    } 
-  }
+  canFlag = true;
 }
+
 
 //-------------------SET VARIABLES FROM CAN PACKET-------------------------------------------
 void processCANMessages() {
@@ -183,6 +182,14 @@ void sendGear() {
 }
 
 void sendToNextion(const String& objectName, const String& value, bool isNumeric) {
+  const unsigned long timeout = 100;  // timeout in milliseconds
+  const int bytesNeeded = objectName.length() + value.length() + (isNumeric ? 6 : 10); // estimate of bytes to send
+
+  unsigned long start = millis();
+  while (Serial1.availableForWrite() < bytesNeeded) {
+    if (millis() - start > timeout) return;  // give up if buffer is stuck
+  }
+  
   Serial1.print(objectName + (isNumeric ? ".val=" : ".txt=\"") + value + (isNumeric ? "" : "\""));
   Serial1.write(0xFF);
   Serial1.write(0xFF);
