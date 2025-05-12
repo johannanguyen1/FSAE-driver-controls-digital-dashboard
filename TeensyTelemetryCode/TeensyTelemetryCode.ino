@@ -3,6 +3,7 @@
 Current ifs:
 
 - need to fix the cooling code, calculations, etc
+- need to understand the whole fuel thing
 - need to add the rest of the sensors for page 2
 
 */
@@ -33,12 +34,6 @@ const unsigned long interval1000 = 1000;
 const unsigned long interval5000 = 5000;
 
 unsigned int rpm, rpm1, rpm2, rpm3dig, gear, coolInTemp, coolOutTemp, batteryVoltage, fuelUsed;
-volatile bool canFlag = false;
-
-
-// Page Values
-const int pagePin = A9; // Analog pin for Page Dial
-unsigned int lastPage = -1;
 
 void setup() {
   pinMode(CS_Pin, OUTPUT);
@@ -61,27 +56,6 @@ void setup() {
 }
 
 void loop() {
-  // Change Pages w/ dial
-  float pageVolt = analogRead(pagePin) * (3.3 / 1023.0); // from 0 to 1023 --> from 0.0 to 3.3
-  unsigned int currentPage = (pageVolt < 1.65) ? 0 : 1; // page0: <1.65  page2>=1.65
-  if (currentPage != lastPage) { 
-    Serial1.print("page" + String(currentPage)); Serial1.write(0xFF); Serial1.write(0xFF); Serial1.write(0xFF);
-    lastPage = currentPage;
-  }
-
-  // read CAN messages if interrupt has triggered
-  if (canFlag) {
-    canFlag = false;
-    while (CAN.checkReceive() == CAN_MSGAVAIL) {
-      CANMessage msg;
-      CAN.readMsgBuf(&msg.id, &msg.len, msg.buf);
-      int nextHead = (bufferHead + 1) % BUFFER_SIZE;
-      if (nextHead != bufferTail) {
-        canBuffer[bufferHead] = msg;
-        bufferHead = nextHead;
-      }
-    }
-  }
 
   processCANMessages();
   unsigned long currentMillis = millis();
@@ -102,9 +76,16 @@ void loop() {
 }
 
 void canISR() {
-  canFlag = true;
+  if (CAN.checkReceive() == CAN_MSGAVAIL) {
+    CANMessage msg;
+    CAN.readMsgBuf(&msg.id, &msg.len, msg.buf);
+    int nextHead = (bufferHead + 1) % BUFFER_SIZE;
+    if (nextHead != bufferTail) {
+      canBuffer[bufferHead] = msg;
+      bufferHead = nextHead;
+    } 
+  }
 }
-
 
 //-------------------SET VARIABLES FROM CAN PACKET-------------------------------------------
 void processCANMessages() {
@@ -162,7 +143,10 @@ void sendRPM() {
 void sendCoolantTemp() {
   sendToNextion("b3", coolInTemp, false);
   sendToNextion("b4", coolOutTemp, false);
-  if (coolInTemp > 99.0) {
+  if (coolInTemp > 70.0 && coolInTemp < 90.0) {
+    sendToNextion("a2", "HEATING UP", false);
+    Serial1.print("warning.aph=70"); Serial1.write(0xFF); Serial1.write(0xFF); Serial1.write(0xFF);
+  } else if (coolInTemp >= 90.0) {
     sendToNextion("a2", "OVERHEATING", false);
     Serial1.print("warning.aph=127"); Serial1.write(0xFF); Serial1.write(0xFF); Serial1.write(0xFF);
   } else { 
@@ -182,14 +166,6 @@ void sendGear() {
 }
 
 void sendToNextion(const String& objectName, const String& value, bool isNumeric) {
-  const unsigned long timeout = 100;  // timeout in milliseconds
-  const int bytesNeeded = objectName.length() + value.length() + (isNumeric ? 6 : 10); // estimate of bytes to send
-
-  unsigned long start = millis();
-  while (Serial1.availableForWrite() < bytesNeeded) {
-    if (millis() - start > timeout) return;  // give up if buffer is stuck
-  }
-  
   Serial1.print(objectName + (isNumeric ? ".val=" : ".txt=\"") + value + (isNumeric ? "" : "\""));
   Serial1.write(0xFF);
   Serial1.write(0xFF);
