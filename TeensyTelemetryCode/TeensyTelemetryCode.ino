@@ -25,15 +25,14 @@ volatile int bufferTail = 0;
 
 MCP_CAN CAN(CS_Pin);
 
-unsigned long last300Update = 0;  // 0.3 seconds
+unsigned long last500Update = 0;  // 0.5 seconds
 unsigned long last1000Update = 0;  // 1.0 seconds
 unsigned long last5000Update = 0;  // 5.0 seconds
-const unsigned long interval300 = 300;
+const unsigned long interval500 = 500;
 const unsigned long interval1000 = 1000;
 const unsigned long interval5000 = 5000;
 
 unsigned int rpm, rpm1, rpm2, rpm3dig, gear, coolInTemp, coolOutTemp, batteryVoltage, fuelUsed;
-volatile bool canFlag = false;
 
 void setup() {
   pinMode(CS_Pin, OUTPUT);
@@ -52,26 +51,12 @@ void setup() {
 
 void loop() {
 
-  // read CAN messages if interrupt has triggered
-  if (canFlag) {
-    canFlag = false;
-    while (CAN.checkReceive() == CAN_MSGAVAIL) {
-      CANMessage msg;
-      CAN.readMsgBuf(&msg.id, &msg.len, msg.buf);
-      int nextHead = (bufferHead + 1) % BUFFER_SIZE;
-      if (nextHead != bufferTail) {
-        canBuffer[bufferHead] = msg;
-        bufferHead = nextHead;
-      }
-    }
-  }
-
   processCANMessages();
   unsigned long currentMillis = millis();
-  if (currentMillis - last300Update >= interval300) { // 300 - RPM, gear
+  if (currentMillis - last500Update >= interval500) { // 500 - RPM, gear
     sendRPM();
     sendGear();
-    last300Update = currentMillis;
+    last500Update = currentMillis;
   }
   if (currentMillis - last1000Update >= interval1000) { // 1000 - coolant
     sendCoolantTemp();
@@ -85,9 +70,17 @@ void loop() {
 }
 
 void canISR() {
-  canFlag = true;
+    while (CAN.checkReceive() == CAN_MSGAVAIL) {
+      CANMessage msg;
+      CAN.readMsgBuf(&msg.id, &msg.len, msg.buf);
+      int nextHead = (bufferHead + 1) % BUFFER_SIZE;
+      if (nextHead != bufferTail) {
+        canBuffer[bufferHead] = msg;
+        bufferHead = nextHead;
+      }
+    }
+  }
 }
-
 
 //-------------------SET VARIABLES FROM CAN PACKET-------------------------------------------
 void processCANMessages() {
@@ -137,10 +130,10 @@ void sendRPM() {
     rpm1 = 100;
     rpm2 = 100;
   }
-  sendToNextion("rpmP1", rpm, false);
-  sendToNextion("rpmP2", rpm, false);
-  sendToNextion("rpm1", rpm1, true);
-  sendToNextion("rpm2", rpm2, true);
+  sendToNextion("rpmP1", String(rpm), false);
+  sendToNextion("rpmP2", String(rpm), false);
+  sendToNextion("rpm1", String(rpm1), true);
+  sendToNextion("rpm2", String(rpm2), true);
 }
 void sendCoolantTemp() {
   sendToNextion("b3", coolInTemp, false);
@@ -157,14 +150,14 @@ void sendCoolantTemp() {
   }
 }
 void sendBattery() {
-  sendToNextion("batteryVoltage", batteryVoltage, false);
+  sendToNextion("batteryVoltage", String(batteryVoltage), false);
 }
 void sendFuel() {
-  sendToNextion("c1", fuelUsed, false);
+  sendToNextion("c1", String(fuelUsed), false);
 }
 void sendGear() {
-  sendToNextion("gearP1", gear, true);
-  sendToNextion("gearP2", gear, true);
+  sendToNextion("gearP1", String(gear), true);
+  sendToNextion("gearP2", String(gear), true);
 }
 
 void sendToNextion(const String& objectName, const String& value, bool isNumeric) {
